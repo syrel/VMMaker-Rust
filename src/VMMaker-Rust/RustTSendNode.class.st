@@ -28,7 +28,7 @@ RustTSendNode >> argumentsForInliningCodeGenerator: aCodeGen [
 		ifFalse: [arguments]
 ]
 
-{ #category : #'inlining support' }
+{ #category : #converting }
 RustTSendNode >> asTransformedConstantPerform [
 	"If the receiver is a send of perform: with a constant selector,
 	 answer a send node that elides the perform:, otherwise answer nil."
@@ -38,7 +38,7 @@ RustTSendNode >> asTransformedConstantPerform [
 	  and: [arguments first isConstant
 	  and: [arguments first value isSymbol
 	  and: [arguments first value numArgs + 1 = arguments size]]]]]) ifTrue:
-		[TSendNode new
+		[RustTSendNode new
 			setSelector: arguments first value
 			receiver: receiver
 			arguments: arguments allButFirst]
@@ -64,7 +64,7 @@ RustTSendNode >> bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold
 	 and: [(codeGen isBuiltinSelector: selector) not]) ifTrue:
 		[codeGen isConstantNode: self valueInto:
 			[:val|
-			 ^TConstantNode new
+			 ^RustTConstantNode new
 				setValue: val;
 				yourself]].
 	newReceiver := receiver bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in: codeGen.
@@ -83,7 +83,7 @@ RustTSendNode >> bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold
 		 (value isInteger
 		 or: [value == true
 		 or: [value == false]]) ifTrue:
-			[^TConstantNode new
+			[^RustTConstantNode new
 				setValue: value;
 				"We assume Message prints its keywords and arguments interleaved.
 				 e.g. that (Message selector: #between:and: arguments: #(0 1)) printString = 'between: 0 and: 1'"

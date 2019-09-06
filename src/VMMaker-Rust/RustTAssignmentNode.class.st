@@ -125,10 +125,10 @@ RustTAssignmentNode >> emitValueExpansionOn: aStream level: level generator: aCo
 	copy := stmtList copy.
 	copy statements
 		at: stmtList statements size
-		put: (TAssignmentNode new
+		put: (RustTAssignmentNode new
 				setVariable: variable
 				expression: lastStmt).
-	(TSendNode new
+	(RustTSendNode new
 			setSelector: expression selector
 			receiver: copy
 			arguments: expression args)

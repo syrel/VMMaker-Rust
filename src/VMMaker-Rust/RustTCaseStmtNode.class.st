@@ -53,7 +53,7 @@ RustTCaseStmtNode >> customizeCase: caseParseTree forVar: varName from: firstInd
 	firstIndex to: lastIndex do:
 		[ :caseIndex |
 		dict := Dictionary new.
-		dict at: varName put: (TConstantNode new setValue: caseIndex).
+		dict at: varName put: (RustTConstantNode new setValue: caseIndex).
 		newCase := caseParseTree copy bindVariableUsesIn: dict andConstantFoldIf: true in: codeGen.
 		self processSharedCodeBlocks: newCase forCase: caseIndex in: codeGen method: aTMethod expandedCases: seen.
 		newCases addLast: newCase].
@@ -117,7 +117,7 @@ RustTCaseStmtNode >> emitCCodeOn: aStream addToEndOfCases: aNodeOrNil level: lev
 		nextPutAll: 'error("Case not found");'.
 	aNodeOrNil ifNotNil:
 		[aStream crtab: level + 1.
-		 (aNodeOrNil copy setExpression: (TConstantNode new setValue: -1))
+		 (aNodeOrNil copy setExpression: (RustTConstantNode new setValue: -1))
 			emitCCodeOn: aStream level: level generator: aCodeGen.
 		 aStream nextPut: $;].
 	aStream
@@ -285,16 +285,16 @@ RustTCaseStmtNode >> processSharedCodeBlocks: caseTree forCase: caseIndex in: co
 						at: node
 						put: (expandViaFallThrough
 								ifTrue: [sharedNode := meth.
-										TLabeledCommentNode new setComment: 'goto ', meth sharedLabel]
+										RustTLabeledCommentNode new setComment: 'goto ', meth sharedLabel]
 								ifFalse: ["Still need recursive expansjon to continue but don't want
 										  to duplicate the node, so substitue an empty method."
-										 sharedNode := TLabeledCommentNode new setComment: 'null '.
+										 sharedNode := RustTLabeledCommentNode new setComment: 'null '.
 										 meth copy
 											renameLabelsForInliningInto: aTMethod;
 											addLabelsTo: aTMethod;
 											asInlineNode])]
 				ifFalse:
-					[map at: node put: (TGoToNode new setLabel: meth sharedLabel)]]].
+					[map at: node put: (RustTGoToNode new setLabel: meth sharedLabel)]]].
 	 caseTree replaceNodesIn: map.
 	 "recursively expand"
 	 sharedNode notNil]
@@ -312,7 +312,7 @@ RustTCaseStmtNode >> processSharedCodeBlocks: caseTree forCase: caseIndex in: co
 				caseTree setStatements: (caseTree statements copyWith: meth asInlineNode)]].
 	exitLabel ifNotNil:
 		[caseTree setStatements: (caseTree statements copyWith:
-			(TLabeledCommentNode new setLabel: exitLabel comment: 'end case'))]
+			(RustTLabeledCommentNode new setLabel: exitLabel comment: 'end case'))]
 ]
 
 { #category : #transformations }
@@ -336,14 +336,14 @@ RustTCaseStmtNode >> setExpression: newExpression cases: newCases [
 	cases := newCases
 ]
 
-{ #category : #accessing }
+{ #category : #initialization }
 RustTCaseStmtNode >> setExpression: aNode selectors: selectorList arguments: anArray [
 	"Initialize the node from the given set of selectors."
 	"Note: Each case is a statement list with containing one statement, a send to self of a selector from the given selector list. Having statement list nodes makes inlining easier later."
 
 	| selfNode stmt lastSel firstInRun sel |
 	expression := aNode.
-	selfNode := TVariableNode new setName: 'self'.
+	selfNode := RustTVariableNode new setName: 'self'.
 	firsts := OrderedCollection new: 400.
 	lasts := OrderedCollection new: 400.
 	cases := OrderedCollection new: 400.
@@ -354,14 +354,14 @@ RustTCaseStmtNode >> setExpression: aNode selectors: selectorList arguments: anA
 		sel ~= lastSel ifTrue: [
 			firsts add: firstInRun.
 			lasts add: i - 2.
-			stmt := TSendNode new setSelector: lastSel receiver: selfNode arguments: anArray.
-			cases add: (TStmtListNode new setArguments: #() statements: (Array with: stmt)).
+			stmt := RustTSendNode new setSelector: lastSel receiver: selfNode arguments: anArray.
+			cases add: (RustTStmtListNode new setArguments: #() statements: (Array with: stmt)).
 			lastSel := sel.
 			firstInRun := i - 1.
 		].
 	].
 	firsts add: firstInRun.
 	lasts add: selectorList size - 1.
-	stmt := TSendNode new setSelector: lastSel receiver: selfNode arguments: anArray.
-	cases add: (TStmtListNode new setArguments: #() statements: (Array with: stmt)).
+	stmt := RustTSendNode new setSelector: lastSel receiver: selfNode arguments: anArray.
+	cases add: (RustTStmtListNode new setArguments: #() statements: (Array with: stmt)).
 ]

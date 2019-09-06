@@ -8,7 +8,7 @@ Class {
 	#category : #'VMMaker-Rust'
 }
 
-{ #category : #utilities }
+{ #category : #adding }
 RustTStmtListNode >> addReadBeforeAssignedIn: variables to: readBeforeAssigned assignments: assigned in: aCodeGen [
 	"Add any variables in variables that are read before written to readBeforeAssigned.
 	 Add unconditional assignments to assigned.  For convenience answer assigned."
@@ -44,7 +44,7 @@ RustTStmtListNode >> addReadBeforeAssignedIn: variables to: readBeforeAssigned a
 					(#(ifTrue: ifFalse: ifNil: ifNotNil:) intersection: node selector keywords) notEmpty
 						ifTrue:
 							["First find assignments in the expression..."
-							 (TStmtListNode new setStatements: {node receiver}; yourself)
+							 (RustTStmtListNode new setStatements: {node receiver}; yourself)
 								addReadBeforeAssignedIn: variables
 								to: readBeforeAssigned
 								assignments: assigned
@@ -96,7 +96,7 @@ RustTStmtListNode >> assignLastExpressionTo: variableNode [
 	index := statements findLast: [:expr| (expr isGoTo or: [expr isLabel]) not].
 	statements
 		at: index
-		put: (TAssignmentNode new
+		put: (RustTAssignmentNode new
 				setVariable: variableNode
 				expression: (statements at: index))
 ]
@@ -332,7 +332,7 @@ RustTStmtListNode >> renameLabelsForInliningInto: aTMethod [
 	labels := OrderedCollection new.
 	self nodesDo:
 		[:node| node isLabel ifTrue: [labels add: node label]].
-	TMethod new
+	RustTMethod new
 		parseTree: self;
 		labels: labels;
 		renameLabelsForInliningInto: aTMethod

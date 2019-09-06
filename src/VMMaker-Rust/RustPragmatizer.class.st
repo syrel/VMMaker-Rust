@@ -20,13 +20,13 @@ RustPragmatizer class >> convertVMMakerAndPluginsToPragmas [
 	that are not the first lines of source in the method, so just move the declarations
 	to the top of the method to resolve."
 	
-	"Pragmatizer convertVMMakerAndPluginsToPragmas"
+	"RustPragmatizer convertVMMakerAndPluginsToPragmas"
 
 	| selectorsToConvert packages converter |
 	selectorsToConvert := #(#export: #static: #inline: #returnTypeC: #var:declareC: #var:type: ).
 	packages := { 'VMMaker-Interpreter' . 'VMMaker-Plugins' . 'VMMaker-SmartSyntaxPlugins' }.
 	packages do: [:package |
-		converter := Pragmatizer on: package selectors: selectorsToConvert.
+		converter := RustPragmatizer on: package selectors: selectorsToConvert.
 		converter pragmatize]
 ]
 
@@ -43,7 +43,7 @@ RustPragmatizer class >> on: packageName selectors: selectorList [
 RustPragmatizer class >> revertVMMakerAndPluginsToMessageSendDeclarations [
 	"To revert back to the message send declarations. "
 	
-	"Pragmatizer revertVMMakerAndPluginsToMessageSendDeclarations"
+	"RustPragmatizer revertVMMakerAndPluginsToMessageSendDeclarations"
 
 	| selectorsToConvert packages converter substringToRemoveFromMethodStamp |
 
@@ -55,7 +55,7 @@ RustPragmatizer class >> revertVMMakerAndPluginsToMessageSendDeclarations [
 	selectorsToConvert := #(#export: #static: #inline: #returnTypeC: #var:declareC: #var:type: ).
 	packages := { 'VMMaker-Interpreter' . 'VMMaker-Plugins' . 'VMMaker-SmartSyntaxPlugins' }.
 	packages do: [:package |
-		converter := Pragmatizer on: package selectors: selectorsToConvert.
+		converter := RustPragmatizer on: package selectors: selectorsToConvert.
 		converter stampCutString: substringToRemoveFromMethodStamp.
 		converter stampInsertString: ''.
 		converter depragmatize]

@@ -118,7 +118,7 @@ RustTSwitchStmtNode >> emitCCodeAsExpressionOn: aStream level: level generator: 
 			 aStream nextPut: $).
 			 aStream crtab: level + n + 1.
 			 aStream nextPutAll: '? ('.
-			 (TStmtListNode new setArguments: #() statements: case statements)
+			 (RustTStmtListNode new setArguments: #() statements: case statements)
 			 	emitCCodeAsArgumentOn: aStream
 				level: level + 2
 				generator: aCodeGen.
@@ -163,14 +163,14 @@ RustTSwitchStmtNode >> emitCCodeOn: aStream addToEndOfCases: aNodeOrNil level: l
 			   aNodeOrNil ifNotNil:
 				[| defaultExpr type |
 				 aStream crtab: level + 1.
-				 defaultExpr := TConstantNode new setValue: -1.
+				 defaultExpr := RustTConstantNode new setValue: -1.
 				 (aNodeOrNil isAssignment
 				  and: [(type := aCodeGen typeFor: aNodeOrNil variable in: aCodeGen currentMethod) notNil
 				  and: [aCodeGen isPointerCType: type]]) ifTrue:
-					[defaultExpr := TSendNode new
+					[defaultExpr := RustTSendNode new
 										setSelector: #cCoerceSimple:to:
-										receiver: (TVariableNode new setName: 'self')
-										arguments: {defaultExpr. TConstantNode new setValue: type}].
+										receiver: (RustTVariableNode new setName: 'self')
+										arguments: {defaultExpr. RustTConstantNode new setValue: type}].
 				 (aNodeOrNil copy setExpression: defaultExpr)
 					emitCCodeOn: aStream level: level generator: aCodeGen.
 				 aStream nextPut: $;]].

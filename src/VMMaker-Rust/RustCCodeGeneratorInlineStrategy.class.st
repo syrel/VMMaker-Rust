@@ -10,19 +10,19 @@ Class {
 { #category : #'instance-cre' }
 RustCCodeGeneratorInlineStrategy class >> always [
 	
-	^ CCodeGeneratorInlineAlwaysStrategy new
+	^ RustCCodeGeneratorInlineAlwaysStrategy new
 ]
 
-{ #category : #'instance-creation' }
+{ #category : #converting }
 RustCCodeGeneratorInlineStrategy class >> asSpecified [
 
-	^ CCodeGeneratorInlineAsSpecifiedStrategy new
+	^ RustCCodeGeneratorInlineAsSpecifiedStrategy new
 ]
 
-{ #category : #'instance-creation' }
+{ #category : #converting }
 RustCCodeGeneratorInlineStrategy class >> asSpecifiedOrQuick [
 
-	^ CCodeGeneratorInlineAsSpecifiedOrQuickStrategy new
+	^ RustCCodeGeneratorInlineAsSpecifiedOrQuickStrategy new
 ]
 
 { #category : #'instance creation' }
@@ -46,7 +46,7 @@ RustCCodeGeneratorInlineStrategy class >> from: anObject [
 { #category : #'instance-crea' }
 RustCCodeGeneratorInlineStrategy class >> never [
 
-	^ CCodeGeneratorInlineNeverStrategy new
+	^ RustCCodeGeneratorInlineNeverStrategy new
 ]
 
 { #category : #testing }

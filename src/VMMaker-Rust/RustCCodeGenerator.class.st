@@ -225,8 +225,8 @@ RustCCodeGenerator >> accessorsAndAssignmentsForMethod: method actuals: actualPa
 		 (actual isVariable or: [actual isSend]) ifTrue:
 			[(actual isSend and: [self isStackAccessor: actual selector given: interpreterClass]) ifTrue:
 				[roots add: actual].
-			assignments add: (TAssignmentNode new
-									setVariable: (TVariableNode new setName: argName)
+			assignments add: (RustTAssignmentNode new
+									setVariable: (RustTVariableNode new setName: argName)
 									expression: actual)]].
 	method parseTree nodesDo:
 		[:node|
@@ -317,16 +317,16 @@ RustCCodeGenerator >> addClassVarsFor: aClass [
 		[:assoc | self addConstantForBinding: assoc]
 ]
 
-{ #category : #public }
+{ #category : #adding }
 RustCCodeGenerator >> addConstantForBinding: variableBinding [
 	"Add the pool variable to the code base as a constant."
 	| node val |
 	val := variableBinding value.
 	node := (useSymbolicConstants and: [self isCLiteral: val])
-				ifTrue:[TDefineNode new
+				ifTrue:[RustTDefineNode new
 							setName: variableBinding key
 							value: variableBinding value]
-				ifFalse:[TConstantNode new setValue: variableBinding value].
+				ifFalse:[RustTConstantNode new setValue: variableBinding value].
 	constants at: variableBinding key put: node
 ]
 
@@ -1007,7 +1007,7 @@ RustCCodeGenerator >> const: constName declareC: declarationString [
 
 	constants
 		at: constName
-		put: (TDefineNode new
+		put: (RustTDefineNode new
 				setName: constName
 				value: declarationString)
 ]
@@ -2037,7 +2037,7 @@ RustCCodeGenerator >> generateDoWhileFalse: msgNode on: aStream indent: level [
 
 	| testStmt receiverWithoutTest |
 	testStmt := msgNode receiver statements last.
-	receiverWithoutTest := TStmtListNode new setStatements: msgNode receiver statements allButLast.
+	receiverWithoutTest := RustTStmtListNode new setStatements: msgNode receiver statements allButLast.
 	aStream nextPutAll: 'do {'; cr.
 	receiverWithoutTest emitCCodeOn: aStream level: level + 1 generator: self.
 	aStream tab: level.
@@ -2052,7 +2052,7 @@ RustCCodeGenerator >> generateDoWhileTrue: msgNode on: aStream indent: level [
 
 	| testStmt receiverWithoutTest |
 	testStmt := msgNode receiver statements last.
-	receiverWithoutTest := TStmtListNode new setStatements: msgNode receiver statements allButLast.
+	receiverWithoutTest := RustTStmtListNode new setStatements: msgNode receiver statements allButLast.
 	aStream nextPutAll: 'do {'; cr.
 	receiverWithoutTest emitCCodeOn: aStream level: level + 1 generator: self.
 	aStream tab: level.
@@ -2113,7 +2113,7 @@ RustCCodeGenerator >> generateIfFalse: msgNode on: aStream indent: level [
 		ifNil:
 			["Eliminate double-negatives"
 			 (msgNode receiver isSend and: [msgNode receiver selector == #not]) ifTrue:
-				[^self generateIfTrue: (TSendNode new
+				[^self generateIfTrue: (RustTSendNode new
 											setSelector: msgNode selector
 											receiver: msgNode receiver receiver
 											arguments: msgNode args
@@ -2142,7 +2142,7 @@ RustCCodeGenerator >> generateIfFalseAsArgument: msgNode on: aStream indent: lev
 		ifNil:
 			["Eliminate double-negatives"
 			 (msgNode receiver isSend and: [msgNode receiver selector == #not]) ifTrue:
-				[^self generateIfTrueAsArgument: (TSendNode new
+				[^self generateIfTrueAsArgument: (RustTSendNode new
 														setSelector: msgNode selector
 														receiver: msgNode receiver receiver
 														arguments: msgNode args
@@ -3289,7 +3289,7 @@ RustCCodeGenerator >> generateWhileForeverBreakIf: breakBoolean loop: msgNode on
 		[aStream tab: level - 1].
 	aStream nextPutAll: 'while (1) {'; cr.
 	testStmt := msgNode receiver statements last.
-	receiverWithoutTest := TStmtListNode new setStatements: msgNode receiver statements allButLast.
+	receiverWithoutTest := RustTStmtListNode new setStatements: msgNode receiver statements allButLast.
 	receiverWithoutTest emitCCodeOn: aStream level: level + 1 generator: self.
 	aStream tab: level + 1; nextPutAll: 'if ('.
 	breakBoolean ifFalse: [aStream nextPut: $!; nextPut: $(].
@@ -3643,7 +3643,7 @@ RustCCodeGenerator >> initializerForInstVar: varName in: aClass [
 		[:s :m| | tmeth |
 		((s beginsWith: 'initialize')
 		 and: [m writesField: instVarIndex]) ifTrue:
-			[tmeth := m asTranslationMethodOfClass: TMethod.
+			[tmeth := m asTranslationMethodOfClass: RustTMethod.
 			 tmeth parseTree nodesDo:
 				[:node| | exprOrAssignment |
 				(node isAssignment
@@ -4389,10 +4389,10 @@ RustCCodeGenerator >> nodeIsDeadCode: aNode withParent: parentNode [
 
 { #category : #inlining }
 RustCCodeGenerator >> nodeToCast: exprNode to: cType [
-	^TSendNode new
+	^RustTSendNode new
 		setSelector: #cCoerceSimple:to:
-		receiver: (TVariableNode new setName: 'self')
-		arguments: { exprNode. TConstantNode new setValue: cType }
+		receiver: (RustTVariableNode new setName: 'self')
+		arguments: { exprNode. RustTConstantNode new setValue: cType }
 		isBuiltInOp: true
 ]
 
@@ -5379,7 +5379,7 @@ RustCCodeGenerator >> testInliningFor: selector as: inlineFlagOrSymbol [
 { #category : #utilities }
 RustCCodeGenerator >> translationMethodClass [
 	"return the class used to produce C translation methods from MethodNodes"
-	^TMethod
+	^RustTMethod
 ]
 
 { #category : #'C translation support' }

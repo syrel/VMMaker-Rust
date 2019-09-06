@@ -50,9 +50,9 @@ RustTParseNode >> anySatisfy: aBlock unless: cautionaryBlock [
 	^false
 ]
 
-{ #category : #transformations }
+{ #category : #converting }
 RustTParseNode >> asReturnNode [
-	^TReturnNode new 
+	^RustTReturnNode new 
 		setExpression: self;
 		yourself
 ]

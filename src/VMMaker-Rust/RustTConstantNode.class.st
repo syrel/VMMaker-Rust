@@ -7,9 +7,9 @@ Class {
 	#category : #'VMMaker-Rust'
 }
 
-{ #category : #transformations }
+{ #category : #converting }
 RustTConstantNode >> asPrintfFormatStringNode [
-	^TPrintfFormatStringNode new
+	^RustTPrintfFormatStringNode new
 		setValue: value;
 		comment: comment;
 		yourself

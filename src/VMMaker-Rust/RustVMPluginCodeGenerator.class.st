@@ -36,7 +36,7 @@ RustVMPluginCodeGenerator >> accessorsAndAssignmentsForSubMethodNamed: selector 
 	(#(loadBitBltFrom: loadWarpBltFrom: loadBitBltFrom:warping:) includes: selector) ifTrue:
 		[(method isNil
 		  or: [method definingClass ~~ BitBltSimulation]) ifTrue:
-			[method := (BitBltSimulation >> selector) asTranslationMethodOfClass: TMethod]].
+			[method := (BitBltSimulation >> selector) asTranslationMethodOfClass: RustTMethod]].
 	method ifNil:
 		[^nil].
 	map := Dictionary new.
@@ -55,10 +55,10 @@ RustVMPluginCodeGenerator >> actualsForMethod: aTMethod [
 	 Override to answer actuals for translated primitives."
 	^(aTMethod args size - 1 to: 0 by: -1) collect:
 		[:i|
-		 TSendNode new
+		 RustTSendNode new
 			setSelector: #stackValue:
-			receiver: (TVariableNode new setName: 'interpreterProxy')
-			arguments: {TConstantNode new setValue: i}]
+			receiver: (RustTVariableNode new setName: 'interpreterProxy')
+			arguments: {RustTConstantNode new setValue: i}]
 ]
 
 { #category : #'C translation' }
@@ -513,10 +513,10 @@ RustVMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 				do: [tMethod static: false; export: false; emitCFunctionPrototype: aStream generator: self]
 				ifOptionalDo:
 					[aStream nextPutAll: '# define '.
-					 (TSendNode new
+					 (RustTSendNode new
 						setSelector: tMethod selector
-							receiver: (TVariableNode new setName: 'interpreterProxy')
-								arguments: (tMethod args collect: [:a| TVariableNode new setName: a]))
+							receiver: (RustTVariableNode new setName: 'interpreterProxy')
+								arguments: (tMethod args collect: [:a| RustTVariableNode new setName: a]))
 						emitCCodeAsArgumentOn: aStream
 							level: 0
 								generator: self.

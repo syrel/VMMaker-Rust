@@ -183,8 +183,8 @@ RustTMethod >> argAssignmentsFor: meth send: aSendNode except: elidedArgs in: aC
 			ifFalse: "Add an assignment for anything except an unused self_in_foo argument"
 				[(elidedArgs includes: argName) ifFalse:
 					[stmtList addLast:
-						(TAssignmentNode new
-							setVariable: (TVariableNode new setName: argName)
+						(RustTAssignmentNode new
+							setVariable: (RustTVariableNode new setName: argName)
 							expression: (aCodeGen
 											node: exprNode copy
 											typeCompatibleWith: argName
@@ -231,9 +231,9 @@ RustTMethod >> args [
 	^args
 ]
 
-{ #category : #transformations }
+{ #category : #converting }
 RustTMethod >> asInlineNode [
-	^TInlineNode new method: self
+	^RustTInlineNode new method: self
 ]
 
 { #category : #transformations }
@@ -280,7 +280,7 @@ RustTMethod >> buildCaseStmt: aSendNode in: aCodeGen [
 			orCancel: aCodeGen abortBlock) ifFalse:
 				[self halt]].
 
-	^TCaseStmtNode new
+	^RustTCaseStmtNode new
 		setExpression: aSendNode args first
 		selectors: aSendNode args second value
 		arguments: (aSendNode args copyFrom: 3 to: aSendNode args size)
@@ -290,7 +290,7 @@ RustTMethod >> buildCaseStmt: aSendNode in: aCodeGen [
 RustTMethod >> buildSwitchStmt: aSendNode parent: parentNode [
 	"Build a switch statement node for the given send of caseOf: or caseOf:otherwise:."
 	| switch |
-	switch := TSwitchStmtNode new
+	switch := RustTSwitchStmtNode new
 				expression: aSendNode receiver
 				cases: aSendNode args first
 				otherwiseOrNil: (aSendNode args at: 2 ifAbsent: [nil]).
@@ -731,7 +731,7 @@ RustTMethod >> ensureToByDoLoopLimitIsSafeAndEfficient: node in: aCodeGen [
 			[hasSideEffects ifTrue:
 				[| var |
 				 var := self unusedNamePrefixedBy: 'toDoLimit' avoiding: locals. "N.B. adds it to locals!!"
-				 node arguments: node args, {TVariableNode new setName: var; yourself}.
+				 node arguments: node args, {RustTVariableNode new setName: var; yourself}.
 				 declarations
 					at: node args third args first
 					ifPresent: [:decl| self declarationAt: var put: (self typeFor: node args third args first in: aCodeGen), ' ', var]]]
@@ -786,7 +786,7 @@ RustTMethod >> exitVar: exitVar label: exitLabel [
 					[map
 						at: node
 						put: (replacement ifNil:
-								[TLabeledCommentNode new setComment: 'return ', node expression printString])]]].
+								[RustTLabeledCommentNode new setComment: 'return ', node expression printString])]]].
 	map isEmpty ifTrue:
 		[self deny: labelUsed.
 		 ^false].
@@ -846,10 +846,10 @@ RustTMethod >> extractDirective: theSelector valueBlock: aBlock default: default
 	| result found newStatements |
 	(properties at: theSelector ifAbsent: []) ifNotNil:
 		[:pragma|
-		^aBlock value: (TSendNode new
+		^aBlock value: (RustTSendNode new
 							setSelector: pragma keyword
-							receiver: (TVariableNode new setName: 'self')
-							arguments: (pragma arguments collect: [:const| TConstantNode new setValue: const]))].
+							receiver: (RustTVariableNode new setName: 'self')
+							arguments: (pragma arguments collect: [:const| RustTConstantNode new setValue: const]))].
 	"Pre-pragma backward compatibility:
 	 Scan the top-level statements for a labelling directive of the form:
 
@@ -998,17 +998,17 @@ RustTMethod >> fixUpReturns: argCount postlog: postlog [
 						 ['primitiveFail' = stmt expression selector])
 							ifTrue: [  "failure return"
 								newStmts addLast: stmt expression.
-								newStmts addLast: (TReturnNode new
-									setExpression: (TVariableNode new setName: 'null'))]
+								newStmts addLast: (RustTReturnNode new
+									setExpression: (RustTVariableNode new setName: 'null'))]
 							ifFalse: [  "normal return"
 								newStmts addAll: postlog.
 								newStmts addAll: (self popArgsExpr: argCount + 1).
-								newStmts addLast: (TSendNode new
+								newStmts addLast: (RustTSendNode new
 									setSelector: #pushInteger:
-									receiver: (TVariableNode new setName: self vmNameString)
+									receiver: (RustTVariableNode new setName: self vmNameString)
 									arguments: (Array with: stmt expression)).
-								newStmts addLast: (TReturnNode new
-									setExpression: (TVariableNode new setName: 'null'))]]
+								newStmts addLast: (RustTReturnNode new
+									setExpression: (RustTVariableNode new setName: 'null'))]]
 					ifFalse: [
 						newStmts addLast: stmt]].
 			node setStatements: newStmts asArray]].
@@ -1273,7 +1273,7 @@ RustTMethod >> inlineBuiltin: aSendNode in: aCodeGen [
 		[inlinedReplacement := (aCodeGen methodNamed: aSendNode receiver selector) copy
 									inlineFunctionCall: aSendNode receiver
 									in: aCodeGen.
-		 ^TSendNode new
+		 ^RustTSendNode new
 			setSelector: aSendNode selector
 			receiver: inlinedReplacement
 			arguments: aSendNode args copy].
@@ -1306,12 +1306,12 @@ RustTMethod >> inlineCaseStatementBranchesIn: aCodeGen localizingVars: varsList 
 							labels addAll: meth labels.
 							newStatements := stmtNode statements asOrderedCollection allButFirst.
 							exitLabel ifNotNil:
-								[newStatements addFirst: (TLabeledCommentNode new
+								[newStatements addFirst: (RustTLabeledCommentNode new
 																setLabel: exitLabel
 																comment: 'end case')].
 							newStatements
 								addFirst: meth asInlineNode;
-								addFirst: (TLabeledCommentNode new setComment: meth selector).
+								addFirst: (RustTLabeledCommentNode new setComment: meth selector).
 							stmtNode setStatements: newStatements]]]]]].
 	usedVars := (locals , args) asSet.
 	1 to: maxTemp do:
@@ -1416,7 +1416,7 @@ RustTMethod >> inlineGuardingConditional: aSendNode in: aCodeGen [
 	(replacementTree statements last isReturn
 	 and: [replacementTree statements last expression value = evaluateIfTrue]) ifTrue:
 		[lastNode := replacementTree statements last].
-	skipLabel := TLabeledCommentNode new setLabel:
+	skipLabel := RustTLabeledCommentNode new setLabel:
 					(self unusedLabelForInlining: method).
 	replacementTree nodesDo:
 		[:node| | expr |
@@ -1426,19 +1426,19 @@ RustTMethod >> inlineGuardingConditional: aSendNode in: aCodeGen [
 			 map
 				at: node
 				put: (expr value ~~ evaluateIfTrue
-						ifTrue: [TGoToNode new setLabel: skipLabel label]
+						ifTrue: [RustTGoToNode new setLabel: skipLabel label]
 						ifFalse:
 							[node == lastNode
-								ifTrue: [TLabeledCommentNode new setComment: 'end ', aSendNode receiver selector, '; fall through']
+								ifTrue: [RustTLabeledCommentNode new setComment: 'end ', aSendNode receiver selector, '; fall through']
 								ifFalse:
 									[evaluateLabel ifNil:
-										[evaluateLabel := TLabeledCommentNode new setLabel:
+										[evaluateLabel := RustTLabeledCommentNode new setLabel:
 													(self unusedLabelForInlining: method)].
-									 TGoToNode new setLabel: evaluateLabel label]])]].
+									 RustTGoToNode new setLabel: evaluateLabel label]])]].
 	replacementTree replaceNodesIn: map.
 	replacementTree comment: {'inline ', aSendNode receiver selector}.
 	self addVarsDeclarationsAndLabelsOf: method except: method args.
-	^TStmtListNode new
+	^RustTStmtListNode new
 		setArguments: #()
 		statements:
 			(evaluateLabel
@@ -1483,19 +1483,19 @@ RustTMethod >> inlineReturningConditional: aSendNode in: aCodeGen [
 						ifTrue: [returnNode]
 						ifFalse:
 							[node == lastNode
-								ifTrue: [TLabeledCommentNode new setComment: 'end ', aSendNode receiver selector, '; fall through']
+								ifTrue: [RustTLabeledCommentNode new setComment: 'end ', aSendNode receiver selector, '; fall through']
 								ifFalse:
 									[label ifNil:
-										[label := TLabeledCommentNode new setLabel:
+										[label := RustTLabeledCommentNode new setLabel:
 													(self unusedLabelForInlining: method)].
-									 TGoToNode new setLabel: label label]])]].
+									 RustTGoToNode new setLabel: label label]])]].
 	replacementTree replaceNodesIn: map.
 	self addVarsDeclarationsAndLabelsOf: method except: method args.
 	replacementTree comment: {'inline ', aSendNode receiver selector}.
 	^label
 		ifNil: [replacementTree]
 		ifNotNil:
-			[TStmtListNode new
+			[RustTStmtListNode new
 				setArguments: #()
 				statements: {replacementTree. label}]
 ]
@@ -1521,7 +1521,7 @@ RustTMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar
 	(methArgs notEmpty and: [methArgs first beginsWith: 'self_in_'])
 		ifTrue: "If the first arg is not used we can and should elide it."
 			[| varNode |
-			 varNode := TVariableNode new setName: methArgs first.
+			 varNode := RustTVariableNode new setName: methArgs first.
 			 (meth parseTree noneSatisfy: [:node| varNode isSameAs: node]) ifTrue:
 				[elidedArgs := {methArgs first}].
 			 methArgs := methArgs allButFirst].
@@ -1562,7 +1562,7 @@ RustTMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar
 				ifTrue: [ labels add: exitLabel ]
 				ifFalse: [ exitLabel := nil ]]].
 	(inlineStmts := OrderedCollection new: meth statements size + meth args size + 2)
-		add: (label := TLabeledCommentNode new setComment: 'begin ', sel);
+		add: (label := RustTLabeledCommentNode new setComment: 'begin ', sel);
 		addAll: (self argAssignmentsFor: meth send: aSendNode except: elidedArgs in: aCodeGen);
 		addAll: meth statements.  "method body"
 	directReturn ifTrue:
@@ -1572,10 +1572,10 @@ RustTMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar
 					[inlineStmts at: inlineStmts size put: inlineStmts last copyWithoutReturn]]
 			ifFalse:
 				[inlineStmts add:
-					(TReturnNode new setExpression: (TVariableNode new setName: 'nil'))]].
+					(RustTReturnNode new setExpression: (RustTVariableNode new setName: 'nil'))]].
 	exitLabel ifNotNil:
 		[inlineStmts add:
-			(TLabeledCommentNode new setLabel:
+			(RustTLabeledCommentNode new setLabel:
 				exitLabel comment: 'end ', meth selector)].
 	inlineStmts size = 1 ifTrue: "Nuke empty methods; e.g. override of flushAtCache"
 		[self assert: inlineStmts first isComment.
@@ -1927,7 +1927,7 @@ RustTMethod >> locals [
 { #category : #transformations }
 RustTMethod >> mapSendsFromSelfToInterpreterProxy: selectors [
 	| interpreterProxyNode |
-	interpreterProxyNode := TVariableNode new setName: 'interpreterProxy'.
+	interpreterProxyNode := RustTVariableNode new setName: 'interpreterProxy'.
 	parseTree nodesDo:
 		[:node|
 		(node isSend
@@ -1988,11 +1988,11 @@ RustTMethod >> mustBeInlined [
 	^inline == #always
 ]
 
-{ #category : #initialization }
+{ #category : #'instance creation' }
 RustTMethod >> newCascadeTempFor: aTParseNode [
 	| varName varNode |
 	varName := self extraVariableName: 'cascade'.
-	varNode := TVariableNode new setName: varName.
+	varNode := RustTVariableNode new setName: varName.
 	aTParseNode isLeaf ifFalse:
 		[self
 			declarationAt: varName
@@ -2006,9 +2006,9 @@ RustTMethod >> newCascadeTempFor: aTParseNode [
 						[:node|
 						(node isAssignment
 						 and: [node variable name = varName]) ifTrue:
-							[node setExpression: (TSendNode new
+							[node setExpression: (RustTSendNode new
 													setSelector: #addressOf:
-													receiver: (TVariableNode new setName: 'self')
+													receiver: (RustTVariableNode new setName: 'self')
 													arguments: {node expression})]]].
 				type]].
 	^varNode
@@ -2041,7 +2041,7 @@ RustTMethod >> oopVariable: aString [
 	(locals includes: aString) ifFalse:
 		[locals add: aString.
 		self declarationAt: aString put: 'sqInt ', aString].
-	^TVariableNode new setName: aString
+	^RustTVariableNode new setName: aString
 ]
 
 { #category : #'C code generation' }
@@ -2414,7 +2414,7 @@ RustTMethod >> removeFinalSelfReturnIn: aCodeGenOrNil [
 				[self returnType: (aCodeGenOrNil implicitReturnTypeFor: selector)]]]
 ]
 
-{ #category : #utilities }
+{ #category : #removing }
 RustTMethod >> removeUnusedTempsAndNilIfRequiredIn: aCodeGen [
 	"Remove all of the unused temps in this method. Answer a set of the references.
 	 As a side-effect introduce explicit temp := nil statements for temps that are
@@ -2440,10 +2440,10 @@ RustTMethod >> removeUnusedTempsAndNilIfRequiredIn: aCodeGen [
 		 parseTree statements addAllFirst:
 			(readBeforeAssigned asSortedCollection collect:
 				[:var| | varNode varType zeroNode |
-				 varNode := TVariableNode new setName: var; yourself.
+				 varNode := RustTVariableNode new setName: var; yourself.
 				 varType := aCodeGen typeFor: varNode in: self.
-				 zeroNode := TConstantNode new setValue: 0; yourself.
-				 TAssignmentNode new
+				 zeroNode := RustTConstantNode new setValue: 0; yourself.
+				 RustTAssignmentNode new
 					setVariable: varNode
 					expression: (((aCodeGen isIntegralCType: varType)
 								    or: [aCodeGen isFloatingPointCType: varType])
@@ -2585,13 +2585,13 @@ RustTMethod >> replaceSizeMessages [
 	| argExpr |
 	parseTree nodesDo: [:n |
 		(n isSend and: [n selector = #size]) ifTrue: [
-			argExpr := TSendNode new
+			argExpr := RustTSendNode new
 				setSelector: #+
 				receiver: n receiver
-				arguments: (Array with: (TConstantNode new setValue: 1)).
+				arguments: (Array with: (RustTConstantNode new setValue: 1)).
 			n
 				setSelector: #sizeOfSTArrayFromCPrimitive:
-				receiver: (TVariableNode new setName: self vmNameString)
+				receiver: (RustTVariableNode new setName: self vmNameString)
 				arguments: (Array with: argExpr)]].
 
 ]
@@ -2871,20 +2871,20 @@ RustTMethod >> transformReturnSubExpression: node toAssignmentOf: exitVar andGot
 						ifFalse:
 							[exitVar
 								ifNil: [expr]
-								ifNotNil: [TAssignmentNode new
-											setVariable: (TVariableNode new setName: exitVar)
+								ifNotNil: [RustTAssignmentNode new
+											setVariable: (RustTVariableNode new setName: exitVar)
 											expression: expr]].
 	 node == parseTree statements last
 		ifTrue:
 			[aBinaryBlock value: replacement value: false]
 		ifFalse:
 			[replacement := replacement
-								ifNil: [TGoToNode new setLabel: exitLabel; yourself]
+								ifNil: [RustTGoToNode new setLabel: exitLabel; yourself]
 								ifNotNil:
-									[TStmtListNode new
+									[RustTStmtListNode new
 										setArguments: #()
 										statements: {replacement.
-													  TGoToNode new setLabel: exitLabel; yourself};
+													  RustTGoToNode new setLabel: exitLabel; yourself};
 										yourself].
 			 aBinaryBlock value: replacement value: true]
 ]
@@ -2902,16 +2902,16 @@ RustTMethod >> transformReturns [
 			[(node expression isVariable and: [node expression name = 'self'])
 				ifTrue:
 					[returnType = #sqInt ifTrue:
-						[node setExpression: (TConstantNode new setValue: 0)]]
+						[node setExpression: (RustTConstantNode new setValue: 0)]]
 				ifFalse:
 					[returnType = #void ifTrue:
 						[parent
 							replaceChild: node
-							with: (TStmtListNode new
+							with: (RustTStmtListNode new
 									setArguments: #()
 									statements: {node expression.
-												  TReturnNode new 
-													setExpression: (TVariableNode new setName: 'self')
+												  RustTReturnNode new 
+													setExpression: (RustTVariableNode new setName: 'self')
 													yourself})]]]]
 ]
 
@@ -2925,7 +2925,7 @@ RustTMethod >> transformToStructClassMethodFor: aCCodeGenerator [
 	self isStructAccessor ifTrue:
 		[^self returnType: (definingClass returnTypeForAccessor: selector)].
 	replacements := IdentityDictionary new.
-	selfNode := TVariableNode new setName: 'self_in_', (aCCodeGenerator cFunctionNameFor: selector).
+	selfNode := RustTVariableNode new setName: 'self_in_', (aCCodeGenerator cFunctionNameFor: selector).
 	args do:
 		[:var|
 		(definingClass isAccessor: var) ifTrue:
@@ -2938,7 +2938,7 @@ RustTMethod >> transformToStructClassMethodFor: aCCodeGenerator [
 			 (definingClass isAccessor: node name) ifTrue:
 				[replacements
 					at: node
-					put: (TSendNode new
+					put: (RustTSendNode new
 							setSelector: node name asSymbol
 							receiver: selfNode
 							arguments: #())]]].

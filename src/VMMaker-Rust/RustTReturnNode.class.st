@@ -76,7 +76,7 @@ RustTReturnNode >> emitValueExpansionOn: aStream level: level generator: aCodeGe
 	copy := stmtList copy.
 	copy statements
 		at: stmtList statements size
-		put: (TReturnNode new setExpression: lastStmt).
+		put: (RustTReturnNode new setExpression: lastStmt).
 	copy emitCCodeOn: aStream level: level generator: aCodeGen
 ]
 
