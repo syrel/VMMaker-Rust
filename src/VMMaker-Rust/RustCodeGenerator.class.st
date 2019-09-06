@@ -695,8 +695,8 @@ RustCodeGenerator >> cLiteralFor: anObject [
 			anObject isString ifTrue:
 				[^'"', (anObject copyReplaceAll: (String with: Character cr) with: '\n') , '"'].
 			anObject == nil ifTrue: [^ 'null' ].
-			anObject == true ifTrue: [^ '1' ].
-			anObject == false ifTrue: [^ '0' ].
+			anObject == true ifTrue: [^ 'true' ].
+			anObject == false ifTrue: [^ 'false' ].
 			anObject isCharacter ifTrue:
 				[^anObject == $'
 					ifTrue: ['''\'''''] "i.e. '\''"
@@ -1594,12 +1594,7 @@ RustCodeGenerator >> fileHeaderVersionStampForSourceClass: sourceClass [
 RustCodeGenerator >> generateAbs: msgNode on: aStream indent: level [
 	"Generate the Rust code for this message onto the given stream."
 
-
-	self halt.
-
-	aStream nextPut: $(.
 	self emitCExpression: msgNode receiver on: aStream.
-	aStream nextPut: $).
 	aStream nextPut: $..
 	aStream nextPutAll: 'abs()'
 ]
@@ -3098,27 +3093,35 @@ RustCodeGenerator >> generateToByDo: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 	"N.B. MessageNode>>asTranslatorNodeIn: adds the limit var as a hidden fourth argument."
 	| blockExpr iterationVar limitExpr mayHaveSideEffects limitVar step |
+		
 	blockExpr := msgNode args third.
 	blockExpr args size = 1 ifFalse:
 		[self error: 'wrong number of block arguments'].
+
 	iterationVar := blockExpr args first.
 	limitExpr := msgNode args first.
-	aStream nextPutAll: 'for (', iterationVar, ' = '.
+
+	aStream nextPutAll: 'for ', iterationVar, ' in ('.
 	self noteUsedVariableName: iterationVar.
 	self emitCExpression: msgNode receiver on: aStream.
+
 	mayHaveSideEffects := msgNode args size = 4. "See TMethod>>prepareMethodIn:"
 	mayHaveSideEffects ifTrue:
-		[limitVar := msgNode args last.
+		[
+		 limitVar := msgNode args last.
 		 aStream nextPutAll: ', ', limitVar name, ' = '.
 		 self emitCExpression: limitExpr on: aStream.
-		 limitExpr := limitVar].
-	aStream nextPutAll: '; ', iterationVar.
+		 limitExpr := limitVar
+		].
+	
+	aStream nextPutAll: '..'.
+	self emitCExpression: limitExpr on: aStream.
+	aStream nextPutAll: ')'.
+
 	step := msgNode args at: 2.
-	self generateToByDoLimitExpression: limitExpr
-		negative: (self stepExpressionIsNegative: step)
-		on: aStream.
-	aStream nextPutAll: '; ', iterationVar, ' += '.
+	aStream nextPutAll: '.step_by('.
 	self emitCExpression: step on: aStream.
+
 	aStream nextPutAll: ') {'; cr.
 	blockExpr emitCCodeOn: aStream level: level + 1 generator: self.
 	aStream tab: level.
@@ -3151,12 +3154,18 @@ RustCodeGenerator >> generateToDo: msgNode on: aStream indent: level [
 		self error: 'wrong number of block arguments'.
 	].
 	iterationVar := msgNode args last args first.
-	aStream nextPutAll: 'for (', iterationVar, ' = '.
+
+	
+
+	aStream nextPutAll: 'for ', iterationVar, ' in '.
 	self emitCExpression: msgNode receiver on: aStream.
-	aStream nextPutAll: '; ', iterationVar.
+	aStream nextPutAll: '..', iterationVar.
+
 	self generateToByDoLimitExpression: msgNode args first negative: false on: aStream.
-	aStream nextPutAll: '; ', iterationVar, '++) {'; cr.
+	aStream nextPutAll: '; ', iterationVar, '{'; cr.
+
 	msgNode args last emitCCodeOn: aStream level: level + 1 generator: self.
+
 	level timesRepeat: [ aStream tab ].
 	aStream nextPutAll: '}'.
 ]
@@ -3311,6 +3320,10 @@ RustCodeGenerator >> harmonizeReturnTypesIn: aSetOfTypes [
 	"Eliminate signed/unsigned conflicts in aSetOfTypes. Non-negative integers can be either
 	 signed or unsigned. Ignore them unless there are no types, in which case default to sqInt."
 	| constantIntegers sqs usqs |
+	
+	
+	self halt.
+	
 	constantIntegers := aSetOfTypes select: [:element| element isInteger].
 	aSetOfTypes removeAll: constantIntegers.
 	"N.B. Because of LP64 vs LLP64 issues do *not* rename #long to #sqInt or #'unsigned long' to #usqInt"
@@ -3352,6 +3365,9 @@ RustCodeGenerator >> implicitReturnTypeFor: aSelector [
 	 aSelector. Default to #sqInt if there is no method, or if the method's
 	 defining class doesn't understand implicitReturnTypeFor:."
 	| m |
+	
+	self halt.
+	
 	m := methods at: aSelector ifAbsent: [^#sqInt].
 	^[m definingClass implicitReturnTypeFor: aSelector]
 		on: MessageNotUnderstood
@@ -3376,6 +3392,10 @@ RustCodeGenerator >> inferTypesForImplicitlyTypedVariablesAndMethods [
 
 	"Iterate over all methods, inferring #void return types, until we reach a fixed point."
 	| allMethods |
+	
+	
+	self halt.
+	
 	allMethods := apiMethods
 					ifNil: [methods]
 					ifNotNil: [(Set withAll: methods)
@@ -3792,6 +3812,9 @@ RustCodeGenerator >> isFloatingPointCType: aCType [ "<String>"
 { #category : #'type inference' }
 RustCodeGenerator >> isFunctionalCType: aType [
 	"Answer if aType is either a function or a pointer to a function."
+	
+	self halt.
+	
 	^aType last == $) and: [(aType indexOf: $() > 0]
 ]
 
@@ -3847,6 +3870,10 @@ RustCodeGenerator >> isNode: aNode constantValueWithinRangeOfType: aType [
 	"Answer if aNode is a constant value within the range of an integral type.
 	 If aNode isn't an integral constant or aType isn't an integral type then answer false."
 	| value |
+	
+	
+	self halt.
+	
 	^aNode expression isConstant
 	  and: [(self isIntegralCType: aType)
 	  and: [(value := aNode expression value) isInteger
@@ -3871,6 +3898,9 @@ RustCodeGenerator >> isObjectAccessor: selector given: interpreterClass [
 
 { #category : #'type inference' }
 RustCodeGenerator >> isPointerCType: aType [
+	
+	self halt.
+	
 	^aType last == $*
 ]
 
@@ -3885,6 +3915,9 @@ RustCodeGenerator >> isQuickCompiledMethod: aCompiledMethod [
 RustCodeGenerator >> isSimpleType: aType [
 	"For the purposes of the read-before-written initializer, answer if
 	 aType is simple, e.g. not a structure, and array or an opaque type."
+	
+	self halt.
+	
 	^(self isPointerCType: aType)
 	  or: [self isIntegralCType: aType]
 ]
@@ -4058,6 +4091,10 @@ RustCodeGenerator >> mergeTypeOf: var in: aDictionary with: newType method: tMet
 	 N.B. We refuse to promote a variable that already has integral type to a floating point
 	 type.  The existing plugins depend on this; one can always use an explicit type in future."
 	| existingType mergedType |
+	
+	
+	self halt.
+	
 	existingType := self
 						extractTypeFor: var
 						fromDeclaration: (aDictionary at: var ifAbsentPut: [newType, ' ', var]).
@@ -4619,6 +4656,9 @@ RustCodeGenerator >> promoteArithmeticTypes: firstType and: secondType [
 	 simple expressions.  Deal with pointer arithmetic, floating point arithmetic and promotion.
 	 It is important to choose deterministically to get stable source generation.
 	 Also, the behaviour of inlined and non inlined code should be unchanged."
+	
+	self halt.
+	
 	((#(#double float) includes: firstType)
 	 or: [#(#double float) includes: secondType]) ifTrue:
 		[^(firstType = #double or: [secondType = #double])
@@ -4665,6 +4705,10 @@ RustCodeGenerator >> promoteIntegerArithmeticTypes: firstType and: secondType [
 
 	This is so that the generated code behaviour is insensitive to inlining."
 	| length1 length2 intSize |
+	
+	
+	self halt.
+	
 	length1 := self sizeOfIntegralCType: firstType.
 	length2 := self sizeOfIntegralCType: secondType.
 	intSize := self sizeOfIntegralCType: #int.
@@ -4946,6 +4990,9 @@ RustCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
 	 If there is a method for sel but its return type is as yet unknown it mustn't
 	 be defaulted, since on a subsequent pass its type may be computable."
 	| sel methodOrNil |
+	
+	self halt.
+	
 	methodOrNil := self anyMethodNamed: (sel := sendNode selector).
 	(methodOrNil notNil and: [methodOrNil returnType notNil]) ifTrue:
 		[^self baseTypeForType: methodOrNil returnType].
@@ -5109,6 +5156,8 @@ RustCodeGenerator >> shouldIncludeMethodFor: aClass selector: selector [
 
 { #category : #'type inference' }
 RustCodeGenerator >> signedTypeForIntegralType: aCTypeString [
+	self halt.
+	
 	(aCTypeString beginsWith: 'unsigned ') ifTrue:
 		[^aCTypeString allButFirst: 8].
 	
@@ -5397,6 +5446,8 @@ RustCodeGenerator >> tryToCollapseBothArmsOfConditionalExpression: msgNode on: a
 
 { #category : #'type inference' }
 RustCodeGenerator >> typeFor: aNode in: aTMethod [
+	self halt.
+
 	^aNode typeFrom: self in: aTMethod
 ]
 
@@ -5406,6 +5457,9 @@ RustCodeGenerator >> typeForArithmetic: sendNode in: aTMethod [
 	 inline simple expressions.  Deal with pointer arithmetic, floating point arithmetic
 	 and promotion."
 	| rcvrType argType arg |
+
+	self halt.
+
 	rcvrType := sendNode receiver typeOrNilFrom: self in: aTMethod.
 	argType := (arg := sendNode args first) typeOrNilFrom: self in: aTMethod.
 	"deal with pointer arithmetic"
@@ -5432,6 +5486,9 @@ RustCodeGenerator >> typeForArithmetic: sendNode in: aTMethod [
 RustCodeGenerator >> typeForConditional: sendNode in: aTMethod [
 	"Answer the return type for a conditional, ifTrue:ifFalse: et al"
 	| firstType secondType |
+	
+	self halt.
+	
 	firstType := self typeFor: sendNode args first statements last in: aTMethod.
 	sendNode selector numArgs = 1 ifTrue:
 		[^firstType].
@@ -5444,6 +5501,8 @@ RustCodeGenerator >> typeForConditional: sendNode in: aTMethod [
 
 { #category : #'type inference' }
 RustCodeGenerator >> typeForDereference: sendNode in: aTMethod [
+	self halt.
+	
 	(self typeFor: sendNode receiver in: aTMethod) ifNotNil:
 		[:type|
 		 type last = $* ifTrue:
@@ -5515,6 +5574,9 @@ RustCodeGenerator >> unreachableMethods [
 
 { #category : #'type inference' }
 RustCodeGenerator >> unsignedTypeForIntegralType: aCTypeString [
+
+	self halt.
+
 	^aCTypeString first = $u
 		ifTrue: [aCTypeString]
 		ifFalse:

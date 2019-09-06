@@ -747,7 +747,7 @@ RustTMethod >> ensureToByDoLoopLimitIsSafeAndEfficient: node in: aCodeGen [
 	 node args size = 4
 		ifTrue:
 			[hasSideEffects
-				ifTrue: [locals add: node args last name]
+				ifTrue: ["locals add: node args last name"]
 				ifFalse: [node arguments: node args allButLast]]
 		ifFalse: "If the expression is complex but as yet there is no limit variable, add it"
 			[hasSideEffects ifTrue:
@@ -1157,7 +1157,9 @@ RustTMethod >> inferReturnTypeFromReturnsIn: aCodeGen [
 					s := Set new.
 					self addTypesFor: n expression to: s in: aCodeGen.
 					{n. s}]]"
-			
+	
+	self halt.
+	
 	aCodeGen maybeBreakForTestToInline: selector in: self.
 	returnType ifNotNil: [^self].
 	aCodeGen
@@ -1210,6 +1212,9 @@ RustTMethod >> inferReturnTypeIn: aCodeGen [
 	"Attempt to infer the return type of the receiver and answer if it changed."
 
 	| existingReturnType |
+
+	self halt.
+
 	existingReturnType := returnType.
 	self inferReturnTypeFromReturnsIn: aCodeGen.
 	^existingReturnType ~= returnType
@@ -2301,6 +2306,9 @@ RustTMethod >> printTempsAndVar: varName on: aStream [
 RustTMethod >> propagateReturnIn: aCodeGen [
 	"Propagate the return type to all return nodes"
 	| map coercionType |
+	
+	self halt.
+	
 	returnType = #void ifTrue:
 		[^self].
 	"The following is necessary for functions returning functions, which have problematic syntax"
@@ -2353,6 +2361,9 @@ RustTMethod >> recordDeclarationsIn: aCCodeGen [
 	 and remove the declarations from the method body."
 
 	| newStatements |
+	
+	self halt.
+	
 	properties pragmas notEmpty ifTrue:
 		[properties pragmas do:
 			[:pragma|
@@ -2631,6 +2642,8 @@ RustTMethod >> returnType: aString [
 	 This string will be used in the C declaration of this function.
 	 If the type exists as a symbol, use that."
 
+	self halt.
+
 	returnType := aString isSymbol
 					ifTrue: [aString]
 					ifFalse: [(Symbol findInterned: aString) ifNil: [aString]]
@@ -2671,7 +2684,7 @@ RustTMethod >> setSelector: sel definingClass: class args: argList locals: local
 	comment := aComment.
 	labels := Set new.
 	parseTree := aBlockNode. "hack; allows nodes to find their parent, etc"
-	parseTree := aBlockNode asTranslatorNodeIn: self.
+	parseTree := aBlockNode asRustTranslatorNodeIn: self.
 	complete := false.  "set to true when all possible inlining has been done"
 	export := self extractExportDirective.
 	static := self extractStaticDirective.

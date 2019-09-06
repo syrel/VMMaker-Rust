@@ -31,6 +31,7 @@ RustTConstantNode >> constantNumbericValueOrNil [
 { #category : #'C code generation' }
 RustTConstantNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	"Emit a C literal."
+	
 	aStream nextPutAll: (aCodeGen cLiteralFor: value).
 	comment ifNotNil:
 		[aStream
@@ -91,8 +92,7 @@ RustTConstantNode >> printOn: aStream level: level [
 
 { #category : #accessing }
 RustTConstantNode >> setValue: anObject [
-
-	value := anObject.
+	value := anObject
 ]
 
 { #category : #'type inference' }
@@ -101,6 +101,9 @@ RustTConstantNode >> typeOrNilFrom: aCodeGenerator in: aTMethod [
 	In that case, answer the shortest architecture independant integer type that could hold the constant.
 	This method must be consistent with CCodeGenerator>>cLiteralFor:"
 	| hb |
+	
+	self halt.
+	
 	value isInteger
 		ifTrue:
 			[value positive

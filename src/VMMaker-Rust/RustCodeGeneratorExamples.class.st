@@ -4,6 +4,46 @@ Class {
 	#category : #'VMMaker-Rust-Examples'
 }
 
+{ #category : #'examples - abs' }
+RustCodeGeneratorExamples >> code_positiveSmallIntegerAbs [
+	<gtExample>
+	| aCode |
+	
+	aCode := self generator cCodeForMethod: #positiveSmallIntegerAbs.
+	
+	^ aCode
+]
+
+{ #category : #'examples - abs' }
+RustCodeGeneratorExamples >> code_returnTrue [
+	<gtExample>
+	| aCode |
+		
+	aCode := self generator cCodeForMethod: #returnTrue.
+	
+	^ aCode
+]
+
+{ #category : #'examples - abs' }
+RustCodeGeneratorExamples >> code_toDo [
+	<gtExample>
+	| aCode |
+	
+	aCode := self generator cCodeForMethod: #toDo.
+	
+	^ aCode
+]
+
+{ #category : #'examples - abs' }
+RustCodeGeneratorExamples >> code_trueAndFalse [
+	<gtExample>
+	| aCode |
+	
+	aCode := self generator cCodeForMethod: #trueAndFalse.
+	
+	^ aCode
+]
+
 { #category : #'instance creation' }
 RustCodeGeneratorExamples >> generator [
 	<gtExample>
@@ -24,14 +64,4 @@ RustCodeGeneratorExamples >> method_positiveSmallIntegerAbs [
 	
 	aRustMethod := self generator methodNamed: #positiveSmallIntegerAbs.
 	^ aRustMethod
-]
-
-{ #category : #'examples - abs' }
-RustCodeGeneratorExamples >> positiveSmallIntegerAbs [
-	<gtExample>
-	| aCode |
-	
-	aCode := self generator cCodeForMethod: #positiveSmallIntegerAbs.
-	
-	^ aCode
 ]
