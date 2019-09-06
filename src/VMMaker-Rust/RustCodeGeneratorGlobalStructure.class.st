@@ -1,6 +1,6 @@
 Class {
-	#name : #RustCCodeGeneratorGlobalStructure,
-	#superclass : #RustCCodeGenerator,
+	#name : #RustCodeGeneratorGlobalStructure,
+	#superclass : #RustCodeGenerator,
 	#instVars : [
 		'localStructDef',
 		'structDefDefine'
@@ -9,7 +9,7 @@ Class {
 }
 
 { #category : #'C code generator' }
-RustCCodeGeneratorGlobalStructure >> buildSortedVariablesCollection [
+RustCodeGeneratorGlobalStructure >> buildSortedVariablesCollection [
 	"Build sorted vars, end result will be sorted collection based on static usage, 
 	perhaps cache lines will like this!"
 
@@ -42,7 +42,7 @@ RustCCodeGeneratorGlobalStructure >> buildSortedVariablesCollection [
 ]
 
 { #category : #utilities }
-RustCCodeGeneratorGlobalStructure >> checkForGlobalUsage: vars in: aTMethod [ 
+RustCodeGeneratorGlobalStructure >> checkForGlobalUsage: vars in: aTMethod [ 
 	"override to handle global struct needs"
 	super checkForGlobalUsage: vars in: aTMethod.
 
@@ -56,7 +56,7 @@ RustCCodeGeneratorGlobalStructure >> checkForGlobalUsage: vars in: aTMethod [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGeneratorGlobalStructure >> emitCCodeOn: aStream doInlining: inlineFlag doAssertions: assertionFlag [
+RustCodeGeneratorGlobalStructure >> emitCCodeOn: aStream doInlining: inlineFlag doAssertions: assertionFlag [
 	super emitCCodeOn: aStream doInlining: inlineFlag doAssertions: assertionFlag.
 
 	"we add an initialiser for the pointer to the global struct; "
@@ -71,7 +71,7 @@ RustCCodeGeneratorGlobalStructure >> emitCCodeOn: aStream doInlining: inlineFlag
 ]
 
 { #category : #'C code generator' }
-RustCCodeGeneratorGlobalStructure >> emitCVariablesOn: aStream [
+RustCodeGeneratorGlobalStructure >> emitCVariablesOn: aStream [
 	"Store the global variable declarations on the given stream.
 	 Break logic into vars for structure and vars for non-structure."
 	| structure nonstruct |
@@ -143,7 +143,7 @@ RustCCodeGeneratorGlobalStructure >> emitCVariablesOn: aStream [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGeneratorGlobalStructure >> emitGlobalStructFlagOn: aStream [
+RustCodeGeneratorGlobalStructure >> emitGlobalStructFlagOn: aStream [
 	"Depending upon the value of structDefDefine (See also #structDefDefine:), define SQ_USE_GLOBAL_STRUCT before including the header. Also derive the flag for using the global register; define USE_GLOBAL_STRUCT_REG to do so"
 
 	aStream
@@ -162,19 +162,19 @@ RustCCodeGeneratorGlobalStructure >> emitGlobalStructFlagOn: aStream [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGeneratorGlobalStructure >> initialize [
+RustCodeGeneratorGlobalStructure >> initialize [
 	super initialize.
 	localStructDef := nil. "ignored ivar - no longer used"
 	structDefDefine := '1'
 ]
 
 { #category : #public }
-RustCCodeGeneratorGlobalStructure >> isGlobalStructureBuild [
+RustCodeGeneratorGlobalStructure >> isGlobalStructureBuild [
 	^true
 ]
 
 { #category : #utilities }
-RustCCodeGeneratorGlobalStructure >> localizeGlobalVariables [
+RustCodeGeneratorGlobalStructure >> localizeGlobalVariables [
 "TPR - remove all the global vars destined for the structure that are only used once - not worth the space,
 actually what will happen is the folding code will fold these variables into the method"
 
@@ -184,7 +184,7 @@ actually what will happen is the folding code will fold these variables into the
 ]
 
 { #category : #'C code generator' }
-RustCCodeGeneratorGlobalStructure >> placeInStructure: var [
+RustCodeGeneratorGlobalStructure >> placeInStructure: var [
 	"See if we should put this array into a structure.
 	The variables listed are hardcoded as C in the interpreter thus they don't get resolved via TVariableNode logic.
 	Also let's ignore variables that have special definitions that require initialization, and the function def which has problems."
@@ -200,7 +200,7 @@ RustCCodeGeneratorGlobalStructure >> placeInStructure: var [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGeneratorGlobalStructure >> returnPrefixFromVariable: aName [
+RustCodeGeneratorGlobalStructure >> returnPrefixFromVariable: aName [
 	^((variables includes: aName)
 	   and: [self placeInStructure: aName])
 		ifTrue: ['GIV(',aName,')']
@@ -208,7 +208,7 @@ RustCCodeGeneratorGlobalStructure >> returnPrefixFromVariable: aName [
 ]
 
 { #category : #'initialize-release' }
-RustCCodeGeneratorGlobalStructure >> structDefDefine: aString [
+RustCodeGeneratorGlobalStructure >> structDefDefine: aString [
 "set the string that will appear in the C file to define whether or not to use the global struct; reasonable values would be:
 'USE_GLOBAL_STRUCT' - which would be defined in a header or makefile
 '0' - which would mean never do it

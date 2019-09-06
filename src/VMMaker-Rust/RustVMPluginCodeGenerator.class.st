@@ -1,6 +1,6 @@
 Class {
 	#name : #RustVMPluginCodeGenerator,
-	#superclass : #RustCCodeGenerator,
+	#superclass : #RustCodeGenerator,
 	#instVars : [
 		'pluginClass',
 		'pluginFunctionsUsed',

@@ -1,6 +1,6 @@
 Class {
-	#name : #RustCCodeGeneratorInlineAsSpecifiedStrategy,
-	#superclass : #RustCCodeGeneratorInlineStrategy,
+	#name : #RustCodeGeneratorInlineAsSpecifiedStrategy,
+	#superclass : #RustCodeGeneratorInlineStrategy,
 	#instVars : [
 		'selectorsOfMethodsNotToInline'
 	],
@@ -8,38 +8,38 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
-RustCCodeGeneratorInlineAsSpecifiedStrategy >> initialize [
+RustCodeGeneratorInlineAsSpecifiedStrategy >> initialize [
 
 	super initialize.
 	selectorsOfMethodsNotToInline := Set new.
 ]
 
 { #category : #asserting }
-RustCCodeGeneratorInlineAsSpecifiedStrategy >> isSelectiveInlineStrategy [
+RustCodeGeneratorInlineAsSpecifiedStrategy >> isSelectiveInlineStrategy [
 
 	^ true
 ]
 
 { #category : #'as yet unclassified' }
-RustCCodeGeneratorInlineAsSpecifiedStrategy >> noteSelectorNotToInline: aSelector [
+RustCodeGeneratorInlineAsSpecifiedStrategy >> noteSelectorNotToInline: aSelector [
 	
 	selectorsOfMethodsNotToInline add: aSelector
 ]
 
 { #category : #'as yet unclassified' }
-RustCCodeGeneratorInlineAsSpecifiedStrategy >> noteSelectorsNotToInline: selectors [
+RustCodeGeneratorInlineAsSpecifiedStrategy >> noteSelectorsNotToInline: selectors [
 	
 	selectorsOfMethodsNotToInline addAll: selectors
 ]
 
 { #category : #asserting }
-RustCCodeGeneratorInlineAsSpecifiedStrategy >> shouldInlineMethod: aMethod [
+RustCodeGeneratorInlineAsSpecifiedStrategy >> shouldInlineMethod: aMethod [
 
 	^ (super shouldInlineMethod: aMethod) and: [ self wantsInline: aMethod ]
 ]
 
 { #category : #'as yet unclassified' }
-RustCCodeGeneratorInlineAsSpecifiedStrategy >> shouldNotInlineSelector: aSelector [
+RustCodeGeneratorInlineAsSpecifiedStrategy >> shouldNotInlineSelector: aSelector [
 	
 	^ selectorsOfMethodsNotToInline includesKey: aSelector
 ]

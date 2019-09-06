@@ -1,17 +1,17 @@
 Class {
-	#name : #RustCCodeGeneratorInlineAsSpecifiedOrQuickStrategy,
-	#superclass : #RustCCodeGeneratorInlineAsSpecifiedStrategy,
+	#name : #RustCodeGeneratorInlineAsSpecifiedOrQuickStrategy,
+	#superclass : #RustCodeGeneratorInlineAsSpecifiedStrategy,
 	#category : #'VMMaker-Rust'
 }
 
 { #category : #accessing }
-RustCCodeGeneratorInlineAsSpecifiedOrQuickStrategy >> inlineFlagOrSymbol [
+RustCodeGeneratorInlineAsSpecifiedOrQuickStrategy >> inlineFlagOrSymbol [
 	
 	^ #asSpecifiedOrQuick
 ]
 
 { #category : #testing }
-RustCCodeGeneratorInlineAsSpecifiedOrQuickStrategy >> isQuickCompiledMethod: aCompiledMethod [
+RustCodeGeneratorInlineAsSpecifiedOrQuickStrategy >> isQuickCompiledMethod: aCompiledMethod [
 
 	^aCompiledMethod isQuick
 	 or: [(#(pushConstant: pushLiteralVariable:) includes: (aCompiledMethod abstractBytecodeMessageAt: aCompiledMethod initialPC) selector)
@@ -19,7 +19,7 @@ RustCCodeGeneratorInlineAsSpecifiedOrQuickStrategy >> isQuickCompiledMethod: aCo
 ]
 
 { #category : #asserting }
-RustCCodeGeneratorInlineAsSpecifiedOrQuickStrategy >> shouldInlineMethod: aMethod [
+RustCodeGeneratorInlineAsSpecifiedOrQuickStrategy >> shouldInlineMethod: aMethod [
 
 	^ (super shouldInlineMethod: aMethod)
 		or: [ self isQuickCompiledMethod: aMethod compiledMethod ]

@@ -1,5 +1,5 @@
 Class {
-	#name : #RustCCodeGenerator,
+	#name : #RustCodeGenerator,
 	#superclass : #Object,
 	#instVars : [
 		'vmClass',
@@ -46,7 +46,7 @@ Class {
 }
 
 { #category : #'class initialization' }
-RustCCodeGenerator class >> initialize [
+RustCodeGenerator class >> initialize [
 	"CCodeGenerator initialize"
 
 	NoRegParmsInAssertVMs := true
@@ -54,12 +54,12 @@ RustCCodeGenerator class >> initialize [
 ]
 
 { #category : #testing }
-RustCCodeGenerator class >> isVarargsSelector: aSymbol [
+RustCodeGenerator class >> isVarargsSelector: aSymbol [
 	^aSymbol endsWith: 'printf:'
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator class >> monticelloDescriptionFor: aClass [
+RustCodeGenerator class >> monticelloDescriptionFor: aClass [
 	"Answer a suitable Monticello package stamp to include in the header."
 	| pkgInfo pkg uuid |
 	pkgInfo := PackageOrganizer default packageOfClass: aClass.
@@ -70,7 +70,7 @@ RustCCodeGenerator class >> monticelloDescriptionFor: aClass [
 ]
 
 { #category : #'removing from system' }
-RustCCodeGenerator class >> removeCompilerMethods [
+RustCodeGenerator class >> removeCompilerMethods [
 	"Before removing the C code generator classes from the system, use this method to remove the compiler node methods that support it. This avoids leaving dangling references to C code generator classes in the compiler node classes."
 
 	ParseNode withAllSubclasses do: [ :nodeClass |
@@ -82,7 +82,7 @@ RustCCodeGenerator class >> removeCompilerMethods [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator class >> shortMonticelloDescriptionForClass: aClass [
+RustCodeGenerator class >> shortMonticelloDescriptionForClass: aClass [
 	"Answer a suitable Monticello package stamp to include in a moduleName."
 	| mdesc |
 	mdesc := [self monticelloDescriptionFor: aClass]
@@ -92,12 +92,12 @@ RustCCodeGenerator class >> shortMonticelloDescriptionForClass: aClass [
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> abortBlock [
+RustCodeGenerator >> abortBlock [
 	^vmMaker ifNotNil: [:vmm| vmm abortBlock]
 ]
 
 { #category : #'spur primitive compilation' }
-RustCCodeGenerator >> accessorChainsForMethod: method interpreterClass: interpreterClass [
+RustCodeGenerator >> accessorChainsForMethod: method interpreterClass: interpreterClass [
 	"Answer a set of access paths from arguments through objects, in the method, assuming
 	 it is a primitive. This is in support of Spur's lazy become.  A primitive may fail because it
 	 may encounter a forwarder.  The primitive failure code needs to know to what depth it
@@ -162,12 +162,12 @@ RustCCodeGenerator >> accessorChainsForMethod: method interpreterClass: interpre
 ]
 
 { #category : #'spur primitive compilation' }
-RustCCodeGenerator >> accessorDepthDeterminationFollowsSelfSends [
+RustCodeGenerator >> accessorDepthDeterminationFollowsSelfSends [
 	^false
 ]
 
 { #category : #'spur primitive compilation' }
-RustCCodeGenerator >> accessorDepthForChain: chain [ "OrderedCollection"
+RustCodeGenerator >> accessorDepthForChain: chain [ "OrderedCollection"
 	"Answer the actual number of accessors in the access chain, filtering out assignments of variables to variables."
 	| accessorDepth |
 	accessorDepth := 0.
@@ -180,7 +180,7 @@ RustCCodeGenerator >> accessorDepthForChain: chain [ "OrderedCollection"
 ]
 
 { #category : #'spur primitive compilation' }
-RustCCodeGenerator >> accessorDepthForMethod: method [
+RustCodeGenerator >> accessorDepthForMethod: method [
 	"Compute the depth the method traverses object structure, assuming it is a primitive.
 	 This is in support of Spur's lazy become.  A primitive may fail because it may encounter
 	 a forwarder.  The primitive failure code needs to know to what depth it must follow
@@ -206,7 +206,7 @@ RustCCodeGenerator >> accessorDepthForMethod: method [
 ]
 
 { #category : #'spur primitive compilation' }
-RustCCodeGenerator >> accessorDepthForSelector: selector [
+RustCodeGenerator >> accessorDepthForSelector: selector [
 	^(selector = #initialiseModule
 	   or: [InterpreterPlugin includesSelector: selector]) ifFalse:
 		[(self methodNamed: selector) ifNotNil:
@@ -214,7 +214,7 @@ RustCCodeGenerator >> accessorDepthForSelector: selector [
 ]
 
 { #category : #'spur primitive compilation' }
-RustCCodeGenerator >> accessorsAndAssignmentsForMethod: method actuals: actualParameters depth: depth interpreterClass: interpreterClass into: aTrinaryBlock [
+RustCodeGenerator >> accessorsAndAssignmentsForMethod: method actuals: actualParameters depth: depth interpreterClass: interpreterClass into: aTrinaryBlock [
 	"Evaluate aTrinaryBlock with the root accessor sends, accessor sends and assignments in the method."
 	| accessors assignments roots |
 	accessors := Set new.
@@ -267,7 +267,7 @@ RustCCodeGenerator >> accessorsAndAssignmentsForMethod: method actuals: actualPa
 ]
 
 { #category : #'spur primitive compilation' }
-RustCCodeGenerator >> actualsForMethod: aTMethod [
+RustCodeGenerator >> actualsForMethod: aTMethod [
 	"Normal primitives have no arguments, but translated primitives do.
 	 This class doesn't handle translated primitives and so smply answers an empty array.
 	 Subclasses override as required."
@@ -275,7 +275,7 @@ RustCCodeGenerator >> actualsForMethod: aTMethod [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> addAllClassVarsFor: aClass [
+RustCodeGenerator >> addAllClassVarsFor: aClass [
 	"Add the class variables for the given class (and its superclasses) to the code base as constants."
 
 	| allClasses |
@@ -285,7 +285,7 @@ RustCCodeGenerator >> addAllClassVarsFor: aClass [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> addClass: aClass [
+RustCodeGenerator >> addClass: aClass [
 	"Add the variables and methods of the given class to the code base."
 
 	aClass prepareToBeAddedToCodeGenerator: self.
@@ -311,14 +311,14 @@ RustCCodeGenerator >> addClass: aClass [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> addClassVarsFor: aClass [
+RustCodeGenerator >> addClassVarsFor: aClass [
 	"Add the class variables for the given class to the code base as constants."
 	aClass classPool associationsDo:
 		[:assoc | self addConstantForBinding: assoc]
 ]
 
 { #category : #adding }
-RustCCodeGenerator >> addConstantForBinding: variableBinding [
+RustCodeGenerator >> addConstantForBinding: variableBinding [
 	"Add the pool variable to the code base as a constant."
 	| node val |
 	val := variableBinding value.
@@ -331,7 +331,7 @@ RustCCodeGenerator >> addConstantForBinding: variableBinding [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> addHeaderFile: aString [
+RustCodeGenerator >> addHeaderFile: aString [
 	"Add a header file. As a hack we allow C preprocessor defs such as #ifdef"
 	self assert: (('"<#' includes: aString first) or: [(aString last: 2) = '_H']).
 	(aString first ~= $#
@@ -342,7 +342,7 @@ RustCCodeGenerator >> addHeaderFile: aString [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> addHeaderFileFirst: aString [
+RustCodeGenerator >> addHeaderFileFirst: aString [
 	"Add a header file to the front of the sequence."
 	self assert: (('"<' includes: aString first) and: ['">' includes: aString last]).
 	self assert: (headerFiles includes: aString) not.
@@ -350,13 +350,13 @@ RustCCodeGenerator >> addHeaderFileFirst: aString [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> addMacro: aString for: selector [
+RustCodeGenerator >> addMacro: aString for: selector [
 	"Add a macro. aString must be the macro arguments and body without the leading #define or name"
 	macros at: selector put: aString
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> addMethod: aTMethod [
+RustCodeGenerator >> addMethod: aTMethod [
 	"Add the given method to the code base and answer it.
 	 Only allow duplicate definitions for struct accessors, since we don't actually
 	 generate code for these methods and hence the conflict doesn't matter.
@@ -377,7 +377,7 @@ RustCCodeGenerator >> addMethod: aTMethod [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> addMethodFor: aClass selector: selector [
+RustCodeGenerator >> addMethodFor: aClass selector: selector [
 	"Add the given method to the code base and answer its translation
 	 or nil if it shouldn't be translated."
 
@@ -424,7 +424,7 @@ RustCCodeGenerator >> addMethodFor: aClass selector: selector [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> addMethodsForTranslatedPrimitives: classAndSelectorList [ 
+RustCodeGenerator >> addMethodsForTranslatedPrimitives: classAndSelectorList [ 
 	| verbose |
 	verbose := false.
 	classAndSelectorList do:
@@ -449,7 +449,7 @@ RustCCodeGenerator >> addMethodsForTranslatedPrimitives: classAndSelectorList [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> addPoolVarsFor: aClass [ 
+RustCodeGenerator >> addPoolVarsFor: aClass [ 
 	"Add the pool variables for the given class to the code base as constants."
 
 	(aClass sharedPools reject: [:pool| pools includes: pool]) do:
@@ -461,12 +461,12 @@ RustCCodeGenerator >> addPoolVarsFor: aClass [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> addSelectorTranslation: aSelector to: aString [
+RustCodeGenerator >> addSelectorTranslation: aSelector to: aString [
 	selectorTranslations at: aSelector asSymbol put: aString
 ]
 
 { #category : #public }
-RustCCodeGenerator >> addStructClass: aClass [
+RustCodeGenerator >> addStructClass: aClass [
 	"Add the non-accessor methods of the given struct class to the code base."
 
 	aClass prepareToBeAddedToCodeGenerator: self.
@@ -488,7 +488,7 @@ RustCCodeGenerator >> addStructClass: aClass [
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> addStructClasses: classes [
+RustCodeGenerator >> addStructClasses: classes [
 	"Add the struct classes and save them for emitCTypesOn: later."
 	structClasses := classes.
 	structClasses do:
@@ -499,7 +499,7 @@ RustCCodeGenerator >> addStructClasses: classes [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> addStructMethodFor: aClass selector: selector [ 
+RustCodeGenerator >> addStructMethodFor: aClass selector: selector [ 
 	"Add the given struct method to the code base and answer its translation
 	 or nil if it shouldn't be translated."
 	(self methodNamed: selector) ifNotNil:
@@ -523,7 +523,7 @@ RustCCodeGenerator >> addStructMethodFor: aClass selector: selector [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> addVariablesInVerbatimCIn: aCCodeSendNode to: aCollection [
+RustCodeGenerator >> addVariablesInVerbatimCIn: aCCodeSendNode to: aCollection [
 	"If aCCodeSendNode has a string argument, parse it and extract anything
 	 that looks like a variable, and add the resulting vars to aCollection."
 	| separators tokens |
@@ -540,7 +540,7 @@ RustCCodeGenerator >> addVariablesInVerbatimCIn: aCCodeSendNode to: aCollection 
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> anyMethodNamed: selector [
+RustCodeGenerator >> anyMethodNamed: selector [
 	"Answer any method in the code base (including api methods) with the given selector."
 
 	^methods
@@ -553,7 +553,7 @@ RustCCodeGenerator >> anyMethodNamed: selector [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> arrayInitializerCalled: varName for: array sizeString: sizeStringOrNil type: cType [
+RustCodeGenerator >> arrayInitializerCalled: varName for: array sizeString: sizeStringOrNil type: cType [
 	"array is a literal array or a CArray on some array."
 	^String streamContents:
 		[:s| | sequence lastLine index newLine allIntegers |
@@ -593,14 +593,14 @@ RustCCodeGenerator >> arrayInitializerCalled: varName for: array sizeString: siz
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> baseTypeForPointerType: aCType [
+RustCodeGenerator >> baseTypeForPointerType: aCType [
 	"Answer the type of the referent of a pointer type."
 	self assert: aCType last == $*.
 	^self baseTypeForType: aCType allButLast
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> baseTypeForType: aCType [
+RustCodeGenerator >> baseTypeForType: aCType [
 	"Reduce various declarations to the most basic type we can determine."
 	| type fpIndex closeidx openidx |
 	type := aCType.
@@ -630,42 +630,41 @@ RustCCodeGenerator >> baseTypeForType: aCType [
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> breakDestInlineSelector: aSelector [
+RustCodeGenerator >> breakDestInlineSelector: aSelector [
 	breakDestInlineSelectors add: aSelector
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> breakOnInline: aBooleanOrNil [
+RustCodeGenerator >> breakOnInline: aBooleanOrNil [
 	breakOnInline := aBooleanOrNil
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> breakSrcInlineSelector: aSelector [
+RustCodeGenerator >> breakSrcInlineSelector: aSelector [
 	breakSrcInlineSelectors add: aSelector
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> cCodeForMethod: selector [
-	"Answer a string containing the C code for the given method."
-	"Example:
-		((CCodeGenerator new initialize addClass: TestCClass1; prepareMethods)
-			cCodeForMethod: #ifTests)"
+RustCodeGenerator >> cCodeForMethod: aSelector [
+	"Answer a string containing the Rust code for the given method"
+	| aRustTMethod aStream |
 
-	| m s |
-	m := self methodNamed: selector.
-	m = nil ifTrue: [ self error: 'method not found in code base: ', selector ].
+	aRustTMethod := self methodNamed: aSelector.
+	aRustTMethod
+		ifNil: [ self error: 'method not found in code base: ', aSelector ].
 
-	s := (ReadWriteStream on: '').
-	m emitCCodeOn: s generator: self.
-	^ s contents
+	aStream := (ReadWriteStream on: '').
+	aRustTMethod emitCCodeOn: aStream generator: self.
+	^ aStream contents
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> cFunctionNameFor: aSelector [
-	"Create a C function name from the given selector by finding
+RustCodeGenerator >> cFunctionNameFor: aSelector [
+	"Create a Rust function name from the given selector by finding
 	 a specific translation, or if none, simply omitting colons, and
 	 any trailing underscores (this supports a varargs convention)."
-	^selectorTranslations
+
+	^ selectorTranslations
 		at: aSelector
 		ifAbsent:
 			[| cSelector |
@@ -677,7 +676,7 @@ RustCCodeGenerator >> cFunctionNameFor: aSelector [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> cLiteralFor: anObject [
+RustCodeGenerator >> cLiteralFor: anObject [
 	"Return a string representing the C literal value for the given object."
 	anObject isNumber
 		ifTrue:
@@ -707,7 +706,7 @@ RustCCodeGenerator >> cLiteralFor: anObject [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> cLiteralFor: anObject name: smalltalkName [
+RustCodeGenerator >> cLiteralFor: anObject name: smalltalkName [
 	"Return a string representing the C literal value for the given object.
 	 This version may use hex for integers that are bit masks."
 	anObject isInteger ifTrue:
@@ -723,7 +722,7 @@ RustCCodeGenerator >> cLiteralFor: anObject name: smalltalkName [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> cLiteralForInteger: anInteger hex: aBoolean [
+RustCodeGenerator >> cLiteralForInteger: anInteger hex: aBoolean [
 	"Answer the string for generating a literal integer.
 	Use hexadecimal notation as prescribed by aBoolean.
 	Use long long suffix (LL) if the integer does not fit on 32 bits.
@@ -757,14 +756,14 @@ RustCCodeGenerator >> cLiteralForInteger: anInteger hex: aBoolean [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> cLiteralForPrintfString: aString [
+RustCodeGenerator >> cLiteralForPrintfString: aString [
 	^(('"', (PrintfFormatString new setFormat: aString) transformForVMMaker, '"')
 		copyReplaceAll: (String with: Character cr) with: '\n')
 			copyReplaceAll: (String with: Character tab) with: '\t'
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> cLiteralForUnsignedInteger: anInteger hex: aBoolean longlong: llBoolean [
+RustCodeGenerator >> cLiteralForUnsignedInteger: anInteger hex: aBoolean longlong: llBoolean [
 	"Answer the string for generating an unsigned literal integer.
 	Use hexadecimal notation as prescribed by aBoolean.
 	Force long long suffix (LL) if the integer does not fit on 32 bits, or if llBoolean is true."
@@ -783,7 +782,7 @@ RustCCodeGenerator >> cLiteralForUnsignedInteger: anInteger hex: aBoolean longlo
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> cLiteralForUnsignedInteger: anInteger longlong: llBoolean [
+RustCodeGenerator >> cLiteralForUnsignedInteger: anInteger longlong: llBoolean [
 	"Answer the string for generating an unsigned literal integer.
 	Eventually use hexadecimal.
 	Force long long suffix (LL) if the integer does not fit on 32 bits, or if llBoolean is true."
@@ -797,14 +796,14 @@ RustCCodeGenerator >> cLiteralForUnsignedInteger: anInteger longlong: llBoolean 
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> cannotInline: selector [
+RustCodeGenerator >> cannotInline: selector [
 
 	self error: 'Failed to inline ', selector,
 			' as it contains unrenamable C declarations or C code'
 ]
 
 { #category : #'error notification' }
-RustCCodeGenerator >> checkClassForNameConflicts: aClass [
+RustCodeGenerator >> checkClassForNameConflicts: aClass [
 	"Verify that the given class does not have constant, variable, or method names that conflict with
 	 those of previously added classes. Raise an error if a conflict is found, otherwise just return."
 
@@ -849,12 +848,12 @@ RustCCodeGenerator >> checkClassForNameConflicts: aClass [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> checkDeleteVariable: aName [
+RustCodeGenerator >> checkDeleteVariable: aName [
 	"Hook for debugging variable deletion."
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> checkForGlobalUsage: vars in: aTMethod [ 
+RustCodeGenerator >> checkForGlobalUsage: vars in: aTMethod [ 
 	vars do:
 		[:var |
 		(variables includes: var) ifTrue: "find the set of method names using this global var"
@@ -869,7 +868,7 @@ RustCCodeGenerator >> checkForGlobalUsage: vars in: aTMethod [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> codeString [
+RustCodeGenerator >> codeString [
 	"Return a string containing all the C code for the code base. Used for testing."
 
 	| stream |
@@ -879,7 +878,7 @@ RustCCodeGenerator >> codeString [
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> collectInlineList: strategy [
+RustCodeGenerator >> collectInlineList: strategy [
 	"Make a list of methods that should be inlined.  If inlineFlagOrSymbol == #asSpecified
 	 only inline methods marked with <inline: true>.  If inlineFlagOrSymbol == #asSpecifiedOrQuick
 	 only inline methods marked with <inline: true> or methods that are quick (^constant, ^inst var)."
@@ -944,7 +943,7 @@ RustCCodeGenerator >> collectInlineList: strategy [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> compileToTMethodSelector: selector in: aClass [
+RustCodeGenerator >> compileToTMethodSelector: selector in: aClass [
 	"Compile a method to a TMethod"
 	^(aClass >> selector) asTranslationMethodOfClass: self translationMethodClass
 
@@ -964,7 +963,7 @@ RustCCodeGenerator >> compileToTMethodSelector: selector in: aClass [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> computeKernelReturnTypes [
+RustCodeGenerator >> computeKernelReturnTypes [
 	| dictionary |
 	dictionary := Dictionary newFromPairs:
 		#(oopAt: #sqInt oopAt:put: #sqInt
@@ -1002,7 +1001,7 @@ RustCCodeGenerator >> computeKernelReturnTypes [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> const: constName declareC: declarationString [
+RustCodeGenerator >> const: constName declareC: declarationString [
 	"Record the given C declaration for a constant."
 
 	constants
@@ -1013,7 +1012,7 @@ RustCCodeGenerator >> const: constName declareC: declarationString [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> conventionalTypeForType: aCTypeString [
+RustCodeGenerator >> conventionalTypeForType: aCTypeString [
 	"The pointer type convention in this version of VMMaker is to have a space between the base type and any *'s.
 	 C type comparisons are simple string comparisons; therefore the convention matters.
 	 Ensure there is a space between the base type and any trailing *'s. Trim whitespace."
@@ -1029,18 +1028,18 @@ RustCCodeGenerator >> conventionalTypeForType: aCTypeString [
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> currentMethod [
+RustCodeGenerator >> currentMethod [
 	^currentMethod
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> currentMethod: aTMethod [
+RustCodeGenerator >> currentMethod: aTMethod [
 	previousCommenter := nil.
 	currentMethod := aTMethod
 ]
 
 { #category : #public }
-RustCCodeGenerator >> declareModuleName: nameString [
+RustCodeGenerator >> declareModuleName: nameString [
 	"add the declaration of a module name, version and local/external tag"
 
 	self var: #moduleName declareC:'const char *moduleName =
@@ -1055,13 +1054,13 @@ RustCCodeGenerator >> declareModuleName: nameString [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> declareVar: varName type: type [
+RustCodeGenerator >> declareVar: varName type: type [
 	"This both creates a varable and provides its type"
 	self var: (variables add: varName asString) type: type
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> doBasicInlining: inlineFlagOrSymbol [
+RustCodeGenerator >> doBasicInlining: inlineFlagOrSymbol [
 	"Inline the bodies of all methods that are suitable for inlining.
 	This method does only the basic inlining suitable for both the core VM and plugins - no bytecode inlining etc"
 
@@ -1086,7 +1085,7 @@ RustCCodeGenerator >> doBasicInlining: inlineFlagOrSymbol [
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> doInlining: inlineFlagOrSymbol [
+RustCodeGenerator >> doInlining: inlineFlagOrSymbol [
 	"Inline the bodies of all methods that are suitable for inlining."
 	"Modified slightly for the core VM translator, since the first level of inlining for the interpret loop must be performed in order that the instruction implementations can easily discover their addresses. Remember to inline the bytecode routines as well"
 
@@ -1124,7 +1123,7 @@ RustCCodeGenerator >> doInlining: inlineFlagOrSymbol [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> emitBuiltinConstructAsArgumentFor: msgNode on: aStream level: level [
+RustCodeGenerator >> emitBuiltinConstructAsArgumentFor: msgNode on: aStream level: level [
 	"If the given selector is in the translation dictionary, translate it into a target code construct and return true. Otherwise, do nothing and return false."
 
 	| action |
@@ -1138,7 +1137,7 @@ RustCCodeGenerator >> emitBuiltinConstructAsArgumentFor: msgNode on: aStream lev
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> emitBuiltinConstructFor: msgNode on: aStream level: level [
+RustCodeGenerator >> emitBuiltinConstructFor: msgNode on: aStream level: level [
 	"If the given selector is in the translation dictionary, translate it into a target code construct and return true. Otherwise, do nothing and return false."
 
 	| action |
@@ -1150,7 +1149,7 @@ RustCCodeGenerator >> emitBuiltinConstructFor: msgNode on: aStream level: level 
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> emitCAPIExportHeaderOn: aStream [ 
+RustCodeGenerator >> emitCAPIExportHeaderOn: aStream [ 
 	"Store prototype declarations for all API methods on the given stream."
 	| exportedAPIMethods usedConstants |
 	exportedAPIMethods := self sortMethods: (methods select: [:m| m isAPIMethod]).
@@ -1165,7 +1164,7 @@ RustCCodeGenerator >> emitCAPIExportHeaderOn: aStream [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> emitCCodeOn: aStream doInlining: inlineFlag doAssertions: assertionFlag [
+RustCodeGenerator >> emitCCodeOn: aStream doInlining: inlineFlag doAssertions: assertionFlag [
 	"Emit C code for all methods in the code base onto the given stream. All inlined method calls should already have been expanded."
 
 	| verbose methodList |
@@ -1207,7 +1206,7 @@ RustCCodeGenerator >> emitCCodeOn: aStream doInlining: inlineFlag doAssertions: 
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> emitCConstants: constList on: aStream [
+RustCodeGenerator >> emitCConstants: constList on: aStream [
 	"Store the global variable declarations on the given stream."
 	constList isEmpty ifTrue: [^self].
 	aStream cr; nextPutAll: '/*** Constants ***/'; cr.
@@ -1242,7 +1241,7 @@ RustCCodeGenerator >> emitCConstants: constList on: aStream [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> emitCConstantsOn: aStream [ 
+RustCodeGenerator >> emitCConstantsOn: aStream [ 
 	"Store the global variable declarations on the given stream."
 	| unused |
 	unused := constants keys asSet.
@@ -1271,14 +1270,14 @@ RustCCodeGenerator >> emitCConstantsOn: aStream [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> emitCExpression: aParseNode on: aStream [ 
+RustCodeGenerator >> emitCExpression: aParseNode on: aStream [ 
 	"Emit C code for the expression described by the given parse node."
 
 	self emitCExpression: aParseNode on: aStream indent: 0
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> emitCExpression: aParseNode on: aStream indent: level [
+RustCodeGenerator >> emitCExpression: aParseNode on: aStream indent: level [
 	"Emit C code for the expression described by the given parse node."
 
 	(aParseNode isLeaf
@@ -1294,7 +1293,7 @@ RustCCodeGenerator >> emitCExpression: aParseNode on: aStream indent: level [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> emitCFunctionPrototypes: methodList on: aStream [ 
+RustCodeGenerator >> emitCFunctionPrototypes: methodList on: aStream [ 
 	"Store prototype declarations for all non-inlined methods on the given stream.
 	 Add a define for a NoDbgRegParms attribute for static functions used for debugging.
 	 gcc and other compilers will use non-standard calling conventions for static functions
@@ -1323,7 +1322,7 @@ RustCCodeGenerator >> emitCFunctionPrototypes: methodList on: aStream [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> emitCHeaderOn: aStream [
+RustCodeGenerator >> emitCHeaderOn: aStream [
 	"Emit the initial part of a source file on aStream, comprising the version stamp,
 	 the global struct usage flags, the header files and preamble code."
 
@@ -1347,7 +1346,7 @@ RustCCodeGenerator >> emitCHeaderOn: aStream [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> emitCMacros: methodList on: aStream [ 
+RustCodeGenerator >> emitCMacros: methodList on: aStream [ 
 	"Store the global variable declarations on the given stream.  Answer any constants used in the macros."
 	| usedConstants |
 	macros isEmpty ifTrue: [^#()].
@@ -1369,7 +1368,7 @@ RustCCodeGenerator >> emitCMacros: methodList on: aStream [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> emitCMethods: methodList on: aStream [
+RustCodeGenerator >> emitCMethods: methodList on: aStream [
 	UIManager default
 		displayProgress: 'Writing Translated Code...'
 		from: 0 to: methods size
@@ -1384,7 +1383,7 @@ RustCCodeGenerator >> emitCMethods: methodList on: aStream [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> emitCTestBlock: aBlockNode on: aStream indent: level [
+RustCodeGenerator >> emitCTestBlock: aBlockNode on: aStream indent: level [
 	"Emit C code for the given block node to be used as a loop test."
 
 	(aBlockNode statements size > 1
@@ -1394,7 +1393,7 @@ RustCCodeGenerator >> emitCTestBlock: aBlockNode on: aStream indent: level [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> emitCTypesOn: aStream [ 
+RustCodeGenerator >> emitCTypesOn: aStream [ 
 	"Store local type declarations on the given stream."
 	structClasses ifNotNil:
 		[structClasses do:
@@ -1406,7 +1405,7 @@ RustCCodeGenerator >> emitCTypesOn: aStream [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> emitCVariablesOn: aStream [ 
+RustCodeGenerator >> emitCVariablesOn: aStream [ 
 	"Store the global variable declarations on the given stream."
 
 	aStream cr; nextPutAll: '/*** Variables ***/'; cr.
@@ -1441,7 +1440,7 @@ RustCCodeGenerator >> emitCVariablesOn: aStream [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> emitExportsNamed: exportsNamePrefix pluginName: pluginName on: aStream [
+RustCodeGenerator >> emitExportsNamed: exportsNamePrefix pluginName: pluginName on: aStream [
 	"Store all the exported primitives in the form used by the internal named prim system."
 	| nilVMClass excludeDepth |
 	(nilVMClass := vmClass isNil) ifTrue: "We need a vmClass temporarily to compute accessor depths."
@@ -1473,14 +1472,14 @@ RustCCodeGenerator >> emitExportsNamed: exportsNamePrefix pluginName: pluginName
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> emitExportsOn: aStream [
+RustCodeGenerator >> emitExportsOn: aStream [
 	"Store all the exported primitives in the form used by the internal named prim system."
 	(vmClass isNil or: [vmClass isInterpreterClass]) ifTrue:
 		[self emitExportsNamed: 'vm' pluginName: '' on: aStream]
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> emitGlobalCVariablesOn: aStream [
+RustCodeGenerator >> emitGlobalCVariablesOn: aStream [
 	"Store the global variable declarations on the given stream."
 
 	aStream cr; nextPutAll: '/*** Global Variables ***/'; cr.
@@ -1505,13 +1504,13 @@ RustCCodeGenerator >> emitGlobalCVariablesOn: aStream [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> emitGlobalStructFlagOn: aStream [
+RustCodeGenerator >> emitGlobalStructFlagOn: aStream [
 	"Default: do nothing.  Overridden in CCGenGlobalStruct."
 
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> emitHeaderFiles: headerFilesSubSequence on: aStream [
+RustCodeGenerator >> emitHeaderFiles: headerFilesSubSequence on: aStream [
 	headerFilesSubSequence do:
 		[:hdr|
 		hdr first ~= $# ifTrue:
@@ -1520,14 +1519,14 @@ RustCCodeGenerator >> emitHeaderFiles: headerFilesSubSequence on: aStream [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> exportedPrimitiveNames [
+RustCodeGenerator >> exportedPrimitiveNames [
 	"Return an array of all exported primitives"
 	^methods select:[:m| m export] thenCollect:[:m| self cFunctionNameFor: m selector].
 
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> extractTypeFor: aVariable fromDeclaration: aVariableDeclaration [
+RustCodeGenerator >> extractTypeFor: aVariable fromDeclaration: aVariableDeclaration [
 	"Eliminate inessentials from aVariableDeclaration to answer a C type without the variable,
 	 or initializations etc"
 	| decl |
@@ -1542,7 +1541,7 @@ RustCCodeGenerator >> extractTypeFor: aVariable fromDeclaration: aVariableDeclar
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> fileHeaderVersionStampForSourceClass: sourceClass [
+RustCodeGenerator >> fileHeaderVersionStampForSourceClass: sourceClass [
 	"Answer a suitable version stamp to include in the header."
 	| exportBuildInfo slangDescription sourceDescription |
 	[exportBuildInfo := sourceClass isInterpreterClass
@@ -1592,35 +1591,21 @@ RustCCodeGenerator >> fileHeaderVersionStampForSourceClass: sourceClass [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateAbs: msgNode on: aStream indent: level [
-	"Generate the C code for this message onto the given stream."
+RustCodeGenerator >> generateAbs: msgNode on: aStream indent: level [
+	"Generate the Rust code for this message onto the given stream."
 
-	| type strippedType absFun |
-	type := self typeFor: msgNode receiver in: currentMethod.
-	strippedType := (type beginsWith: 'unsigned ')
-		ifTrue: [type allButFirst: 'unsigned ' size]
-		ifFalse: [(type beginsWith: 'u')
-			ifTrue: [type allButFirst: 1]
-			ifFalse: [type]].
-	absFun :=
-		(#(	('long long' llabs) ('__int64' #llabs) ('int64_t' #llabs)
-			(sqInt SQABS)
-			(sqLong SQLABS)
-			(double fabs)
-			(float fabsf))
-				detect: [:tuple| strippedType beginsWith: tuple first]
-				ifNone: [])
-			ifNotNil: [:tuple| tuple last]
-			ifNil: [#abs].
-	
-	aStream nextPutAll: absFun.
+
+	self halt.
+
 	aStream nextPut: $(.
 	self emitCExpression: msgNode receiver on: aStream.
-	aStream nextPut: $)
+	aStream nextPut: $).
+	aStream nextPut: $..
+	aStream nextPutAll: 'abs()'
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateAddressOf: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateAddressOf: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPut: $(; nextPut: $&.
@@ -1629,7 +1614,7 @@ RustCCodeGenerator >> generateAddressOf: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateAllMask: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateAllMask: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: '(('.
@@ -1640,7 +1625,7 @@ RustCCodeGenerator >> generateAllMask: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateAnd: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateAnd: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	self emitCExpression: msgNode receiver on: aStream indent: level.
@@ -1649,14 +1634,14 @@ RustCCodeGenerator >> generateAnd: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateAsAddress: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateAsAddress: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	self emitCExpression: msgNode args first on: aStream
 ]
 
 { #category : #'C translation support' }
-RustCCodeGenerator >> generateAsConstantExpression: msgNode on: aStream [
+RustCodeGenerator >> generateAsConstantExpression: msgNode on: aStream [
 	"Attempt to generate the C code for this message onto the given stream.
 	 Answer if the attempt succeeded.  This handles integer overflow of int
 	 expressions in a 64-bit compiler."
@@ -1670,7 +1655,7 @@ RustCCodeGenerator >> generateAsConstantExpression: msgNode on: aStream [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateAsFloat: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateAsFloat: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll:'((double) '.
@@ -1679,7 +1664,7 @@ RustCCodeGenerator >> generateAsFloat: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateAsInteger: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateAsInteger: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll:'((sqInt)'.
@@ -1688,7 +1673,7 @@ RustCCodeGenerator >> generateAsInteger: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateAsIntegerPtr: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateAsIntegerPtr: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll:'((sqIntptr_t)'.
@@ -1697,7 +1682,7 @@ RustCCodeGenerator >> generateAsIntegerPtr: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateAsLong: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateAsLong: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll:'((long)'.
@@ -1706,7 +1691,7 @@ RustCCodeGenerator >> generateAsLong: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateAsSymbol: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateAsSymbol: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream.
 	 The receiver is expected to be a TConstantNode."
 
@@ -1714,7 +1699,7 @@ RustCCodeGenerator >> generateAsSymbol: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateAsUnsignedInteger: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateAsUnsignedInteger: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll:'((usqInt)'.
@@ -1723,7 +1708,7 @@ RustCCodeGenerator >> generateAsUnsignedInteger: msgNode on: aStream indent: lev
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateAsUnsignedIntegerPtr: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateAsUnsignedIntegerPtr: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll:'((usqIntptr_t)'.
@@ -1732,7 +1717,7 @@ RustCCodeGenerator >> generateAsUnsignedIntegerPtr: msgNode on: aStream indent: 
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateAsUnsignedLong: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateAsUnsignedLong: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll:'((unsigned long)'.
@@ -1741,7 +1726,7 @@ RustCCodeGenerator >> generateAsUnsignedLong: msgNode on: aStream indent: level 
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateAsUnsignedLongLong: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateAsUnsignedLongLong: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll:'((unsigned long long)'.
@@ -1750,7 +1735,7 @@ RustCCodeGenerator >> generateAsUnsignedLongLong: msgNode on: aStream indent: le
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateAsVoidPointer: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateAsVoidPointer: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: '((void *)'.
@@ -1759,7 +1744,7 @@ RustCCodeGenerator >> generateAsVoidPointer: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateAt: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateAt: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	self emitCExpression: msgNode receiver on: aStream.
@@ -1769,7 +1754,7 @@ RustCCodeGenerator >> generateAt: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateAtPut: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateAtPut: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	self emitCExpression: msgNode receiver on: aStream.
@@ -1780,7 +1765,7 @@ RustCCodeGenerator >> generateAtPut: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateBaseHeaderSize: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateBaseHeaderSize: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: 'BaseHeaderSize'
@@ -1788,7 +1773,7 @@ RustCCodeGenerator >> generateBaseHeaderSize: msgNode on: aStream indent: level 
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateBetweenAnd: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateBetweenAnd: msgNode on: aStream indent: level [
 	"Generate the C code for the between:and: message onto the given stream."
 
 	aStream nextPutAll: '(('.
@@ -1803,7 +1788,7 @@ RustCCodeGenerator >> generateBetweenAnd: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateBitAnd: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateBitAnd: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	self emitCExpression: msgNode receiver on: aStream indent: level.
@@ -1812,7 +1797,7 @@ RustCCodeGenerator >> generateBitAnd: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateBitClear: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateBitClear: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream next: 2 put: $(.
@@ -1825,7 +1810,7 @@ RustCCodeGenerator >> generateBitClear: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateBitInvert: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateBitInvert: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream.
 	 If the selector is bitInvert32 then cast to unsigned int to ensure
 	 a 32-bit value on 64-bit platforms."
@@ -1843,7 +1828,7 @@ RustCCodeGenerator >> generateBitInvert: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateBitOr: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateBitOr: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	self emitCExpression: msgNode receiver on: aStream indent: level.
@@ -1852,7 +1837,7 @@ RustCCodeGenerator >> generateBitOr: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateBitShift: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateBitShift: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	| arg rcvr shift |
@@ -1881,7 +1866,7 @@ RustCCodeGenerator >> generateBitShift: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateBitXor: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateBitXor: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	self emitCExpression: msgNode receiver on: aStream indent: level.
@@ -1890,7 +1875,7 @@ RustCCodeGenerator >> generateBitXor: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateByteSwap32: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateByteSwap32: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: #'SQ_SWAP_4_BYTES'.
@@ -1900,7 +1885,7 @@ RustCCodeGenerator >> generateByteSwap32: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateByteSwap32IfBigEndian: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateByteSwap32IfBigEndian: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: #'SQ_SWAP_4_BYTES_IF_BIGENDIAN'.
@@ -1910,7 +1895,7 @@ RustCCodeGenerator >> generateByteSwap32IfBigEndian: msgNode on: aStream indent:
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateByteSwap64: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateByteSwap64: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: #'SQ_SWAP_8_BYTES'.
@@ -1920,7 +1905,7 @@ RustCCodeGenerator >> generateByteSwap64: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateByteSwap64IfBigEndian: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateByteSwap64IfBigEndian: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: #'SQ_SWAP_8_BYTES_IF_BIGENDIAN'.
@@ -1930,7 +1915,7 @@ RustCCodeGenerator >> generateByteSwap64IfBigEndian: msgNode on: aStream indent:
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateBytesPerOop: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateBytesPerOop: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream.
 	 Would prefer to use OopSize than BytesPerOop (shorter)."
 
@@ -1938,7 +1923,7 @@ RustCCodeGenerator >> generateBytesPerOop: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateBytesPerWord: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateBytesPerWord: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream.
 	 Would prefer to use WordSize than BytesPerWord (shorter) but e.g.
 	 mpegtype.h has a parameter named WordSize."
@@ -1947,7 +1932,7 @@ RustCCodeGenerator >> generateBytesPerWord: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateCCoercion: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateCCoercion: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	| cExpr cType literal |
@@ -1967,7 +1952,7 @@ RustCCodeGenerator >> generateCCoercion: msgNode on: aStream indent: level [
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> generateDeadCode [
+RustCodeGenerator >> generateDeadCode [
 	"Answer whether we should generate 'dead code' branches. This can be useful for hacking the VM when used in conjunction with #useSymbolicConstants, e.g., for code like:
 		DoAssertionChecks ifTrue:[
 			...
@@ -1986,13 +1971,13 @@ RustCCodeGenerator >> generateDeadCode [
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> generateDeadCode: aBool [
+RustCodeGenerator >> generateDeadCode: aBool [
 	"Indicate whether we should generate 'dead code' branches."
 	generateDeadCode := aBool
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateDeny: denyMsgNode on: aStream indent: level [
+RustCodeGenerator >> generateDeny: denyMsgNode on: aStream indent: level [
 	"Generate the C code for a deny: expr onto the given stream."
 
 	aStream nextPutAll: 'assert(!('.
@@ -2001,7 +1986,7 @@ RustCCodeGenerator >> generateDeny: denyMsgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateDivide: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateDivide: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	| rcvr arg divisor check |
@@ -2032,7 +2017,7 @@ RustCCodeGenerator >> generateDivide: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateDoWhileFalse: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateDoWhileFalse: msgNode on: aStream indent: level [
 	"Generate do {stmtList} while(!(cond))"
 
 	| testStmt receiverWithoutTest |
@@ -2047,7 +2032,7 @@ RustCCodeGenerator >> generateDoWhileFalse: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateDoWhileTrue: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateDoWhileTrue: msgNode on: aStream indent: level [
 	"Generate do {stmtList} while(cond)"
 
 	| testStmt receiverWithoutTest |
@@ -2062,7 +2047,7 @@ RustCCodeGenerator >> generateDoWhileTrue: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateEqual: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateEqual: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	self emitCExpression: msgNode receiver on: aStream indent: level.
@@ -2071,7 +2056,7 @@ RustCCodeGenerator >> generateEqual: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateFlag: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateFlag: msgNode on: aStream indent: level [
 	"Compoensate for the use of self flag: #aSymbol.  We used to translate  symbols
 	 as strings unless they were quoted via #aSymbol asSymbol. But this is too tedious,
 	 so we now translate symbols directly.  The only use that this affected was in
@@ -2088,7 +2073,7 @@ RustCCodeGenerator >> generateFlag: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateGreaterThan: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateGreaterThan: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	self emitCExpression: msgNode receiver on: aStream indent: level.
@@ -2097,7 +2082,7 @@ RustCCodeGenerator >> generateGreaterThan: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateGreaterThanOrEqual: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateGreaterThanOrEqual: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	self emitCExpression: msgNode receiver on: aStream indent: level.
@@ -2106,7 +2091,7 @@ RustCCodeGenerator >> generateGreaterThanOrEqual: msgNode on: aStream indent: le
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateIfFalse: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateIfFalse: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
@@ -2135,7 +2120,7 @@ RustCCodeGenerator >> generateIfFalse: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateIfFalseAsArgument: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateIfFalseAsArgument: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
@@ -2162,7 +2147,7 @@ RustCCodeGenerator >> generateIfFalseAsArgument: msgNode on: aStream indent: lev
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateIfFalseIfTrue: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateIfFalseIfTrue: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
@@ -2182,7 +2167,7 @@ RustCCodeGenerator >> generateIfFalseIfTrue: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateIfFalseIfTrueAsArgument: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateIfFalseIfTrueAsArgument: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
@@ -2204,7 +2189,7 @@ RustCCodeGenerator >> generateIfFalseIfTrueAsArgument: msgNode on: aStream inden
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateIfNil: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateIfNil: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	(self isNilConstantReceiverOf: msgNode)
@@ -2219,7 +2204,7 @@ RustCCodeGenerator >> generateIfNil: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateIfNilAsArgument: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateIfNilAsArgument: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	(self isNilConstantReceiverOf: msgNode)
@@ -2241,7 +2226,7 @@ RustCCodeGenerator >> generateIfNilAsArgument: msgNode on: aStream indent: level
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateIfNilIfNotNil: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateIfNilIfNotNil: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	(self isNilConstantReceiverOf: msgNode)
@@ -2258,7 +2243,7 @@ RustCCodeGenerator >> generateIfNilIfNotNil: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateIfNilIfNotNilAsArgument: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateIfNilIfNotNilAsArgument: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	(self isNilConstantReceiverOf: msgNode)
@@ -2275,7 +2260,7 @@ RustCCodeGenerator >> generateIfNilIfNotNilAsArgument: msgNode on: aStream inden
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateIfNotNil: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateIfNotNil: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	(self isNilConstantReceiverOf: msgNode)
@@ -2289,7 +2274,7 @@ RustCCodeGenerator >> generateIfNotNil: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateIfNotNilAsArgument: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateIfNotNilAsArgument: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	(self isNilConstantReceiverOf: msgNode)
@@ -2304,7 +2289,7 @@ RustCCodeGenerator >> generateIfNotNilAsArgument: msgNode on: aStream indent: le
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateIfNotNilIfNil: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateIfNotNilIfNil: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	(self isNilConstantReceiverOf: msgNode)
@@ -2321,7 +2306,7 @@ RustCCodeGenerator >> generateIfNotNilIfNil: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateIfNotNilIfNilAsArgument: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateIfNotNilIfNilAsArgument: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	(self isNilConstantReceiverOf: msgNode)
@@ -2338,7 +2323,7 @@ RustCCodeGenerator >> generateIfNotNilIfNilAsArgument: msgNode on: aStream inden
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateIfTrue: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateIfTrue: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
@@ -2356,7 +2341,7 @@ RustCCodeGenerator >> generateIfTrue: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateIfTrueAsArgument: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateIfTrueAsArgument: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
@@ -2374,7 +2359,7 @@ RustCCodeGenerator >> generateIfTrueAsArgument: msgNode on: aStream indent: leve
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateIfTrueIfFalse: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateIfTrueIfFalse: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
@@ -2394,7 +2379,7 @@ RustCCodeGenerator >> generateIfTrueIfFalse: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateIfTrueIfFalseAsArgument: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateIfTrueIfFalseAsArgument: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
@@ -2416,7 +2401,7 @@ RustCCodeGenerator >> generateIfTrueIfFalseAsArgument: msgNode on: aStream inden
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateInlineCCode: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateInlineCCode: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream.
 	 There are two forms, self cCode: aString ... and self cCode: aBlock."
 
@@ -2433,7 +2418,7 @@ RustCCodeGenerator >> generateInlineCCode: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateInlineCCodeAsArgument: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateInlineCCodeAsArgument: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream.
 	 There are two forms, self cCode: aString ... and self cCode: aBlock."
 
@@ -2451,7 +2436,7 @@ RustCCodeGenerator >> generateInlineCCodeAsArgument: msgNode on: aStream indent:
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateInlineCPreprocessorDirective: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateInlineCPreprocessorDirective: msgNode on: aStream indent: level [
 	"Generate the C preprocessor directive for this message onto the given stream."
 
 	aStream cr; nextPutAll: msgNode args first value.
@@ -2459,7 +2444,7 @@ RustCCodeGenerator >> generateInlineCPreprocessorDirective: msgNode on: aStream 
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateInlineCppIfElse: msgNode asArgument: asArgument on: aStream indent: level [
+RustCodeGenerator >> generateInlineCppIfElse: msgNode asArgument: asArgument on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 	| expr putStatement |
 	"Compile-time expansion for constants set in the options dictionary,
@@ -2543,19 +2528,19 @@ RustCCodeGenerator >> generateInlineCppIfElse: msgNode asArgument: asArgument on
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateInlineCppIfElse: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateInlineCppIfElse: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 	self generateInlineCppIfElse: msgNode asArgument: false on: aStream indent: level
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateInlineCppIfElseAsArgument: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateInlineCppIfElseAsArgument: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 	self generateInlineCppIfElse: msgNode asArgument: true on: aStream indent: level
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateInlineDirective: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateInlineDirective: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: '/* inline: '.
@@ -2565,7 +2550,7 @@ RustCCodeGenerator >> generateInlineDirective: msgNode on: aStream indent: level
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateIntegerObjectOf: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateIntegerObjectOf: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 	| expr mustCastToUnsigned type typeIsUnsigned |
 	expr := msgNode args first.
@@ -2589,7 +2574,7 @@ RustCCodeGenerator >> generateIntegerObjectOf: msgNode on: aStream indent: level
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateIntegerValueOf: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateIntegerValueOf: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPut: $(.
@@ -2600,7 +2585,7 @@ RustCCodeGenerator >> generateIntegerValueOf: msgNode on: aStream indent: level 
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateIsIntegerObject: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateIsIntegerObject: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	vmClass objectMemoryClass numSmallIntegerTagBits = 1
@@ -2618,7 +2603,7 @@ RustCCodeGenerator >> generateIsIntegerObject: msgNode on: aStream indent: level
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateIsNil: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateIsNil: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	self emitCExpression: msgNode receiver on: aStream.
@@ -2627,7 +2612,7 @@ RustCCodeGenerator >> generateIsNil: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateLessThan: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateLessThan: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	self emitCExpression: msgNode receiver on: aStream indent: level.
@@ -2636,7 +2621,7 @@ RustCCodeGenerator >> generateLessThan: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateLessThanOrEqual: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateLessThanOrEqual: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	self emitCExpression: msgNode receiver on: aStream indent: level.
@@ -2645,7 +2630,7 @@ RustCCodeGenerator >> generateLessThanOrEqual: msgNode on: aStream indent: level
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateMax: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateMax: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: '(('.
@@ -2660,7 +2645,7 @@ RustCCodeGenerator >> generateMax: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateMin: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateMin: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: '(('.
@@ -2675,7 +2660,7 @@ RustCCodeGenerator >> generateMin: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateMinus: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateMinus: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	(self generateAsConstantExpression: msgNode on: aStream) ifFalse:
@@ -2689,7 +2674,7 @@ RustCCodeGenerator >> generateMinus: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateModulo: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateModulo: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	self emitCExpression: msgNode receiver on: aStream.
@@ -2698,7 +2683,7 @@ RustCCodeGenerator >> generateModulo: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateNegated: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateNegated: msgNode on: aStream indent: level [
 	"Generate the C code for teh negated message onto the given stream."
 
 	aStream nextPut: $-.
@@ -2706,7 +2691,7 @@ RustCCodeGenerator >> generateNegated: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateNoMask: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateNoMask: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPut: $(.
@@ -2715,7 +2700,7 @@ RustCCodeGenerator >> generateNoMask: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateNot: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateNot: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: '!'.
@@ -2723,7 +2708,7 @@ RustCCodeGenerator >> generateNot: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateNotEqual: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateNotEqual: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	self emitCExpression: msgNode receiver on: aStream indent: level.
@@ -2732,7 +2717,7 @@ RustCCodeGenerator >> generateNotEqual: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateNotNil: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateNotNil: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	self emitCExpression: msgNode receiver on: aStream.
@@ -2741,7 +2726,7 @@ RustCCodeGenerator >> generateNotNil: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateOr: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateOr: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	self emitCExpression: msgNode receiver on: aStream.
@@ -2750,7 +2735,7 @@ RustCCodeGenerator >> generateOr: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generatePerform: msgNode on: aStream indent: level [
+RustCodeGenerator >> generatePerform: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	self emitCExpression: msgNode args first on: aStream.
@@ -2762,7 +2747,7 @@ RustCCodeGenerator >> generatePerform: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generatePlus: msgNode on: aStream indent: level [
+RustCodeGenerator >> generatePlus: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 	(self generateAsConstantExpression: msgNode on: aStream) ifFalse:
 		[msgNode args first constantNumbericValueOrNil ifNotNil:
@@ -2775,7 +2760,7 @@ RustCCodeGenerator >> generatePlus: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generatePreDecrement: msgNode on: aStream indent: level [
+RustCodeGenerator >> generatePreDecrement: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	| varNode |
@@ -2788,7 +2773,7 @@ RustCCodeGenerator >> generatePreDecrement: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generatePreIncrement: msgNode on: aStream indent: level [
+RustCodeGenerator >> generatePreIncrement: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	| varNode |
@@ -2801,7 +2786,7 @@ RustCCodeGenerator >> generatePreIncrement: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateRaisedTo: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateRaisedTo: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll:'pow('.
@@ -2812,7 +2797,7 @@ RustCCodeGenerator >> generateRaisedTo: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateRepeat: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateRepeat: msgNode on: aStream indent: level [
 	"Generate while(1) { stmtList } "
 
 	aStream nextPutAll: 'while(1) {'; cr.
@@ -2823,7 +2808,7 @@ RustCCodeGenerator >> generateRepeat: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateRounded: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateRounded: msgNode on: aStream indent: level [
 	"Generate the C code for rounded onto the given stream."
 
 	aStream nextPutAll: 'round('.
@@ -2832,7 +2817,7 @@ RustCCodeGenerator >> generateRounded: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateSequentialAnd: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateSequentialAnd: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
@@ -2853,7 +2838,7 @@ RustCCodeGenerator >> generateSequentialAnd: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateSequentialOr: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateSequentialOr: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 	"Note: PP 2.3 compiler produces two arguments for or:, presumably
 	 to help with inlining later. Taking the last agument should do the correct
@@ -2877,7 +2862,7 @@ RustCCodeGenerator >> generateSequentialOr: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateSharedCodeDirective: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateSharedCodeDirective: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: '/* common code: '.
@@ -2887,7 +2872,7 @@ RustCCodeGenerator >> generateSharedCodeDirective: msgNode on: aStream indent: l
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateShiftLeft: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateShiftLeft: msgNode on: aStream indent: level [
 	"Generate a C bitShift.  If we can determine the result
 	 would overflow the word size, cast to a long integer."
 	| rcvr arg castToLong type mustCastBackToSign mustCastToUnsigned canSuffixTheConstant typeIsUnsigned |
@@ -2945,7 +2930,7 @@ RustCCodeGenerator >> generateShiftLeft: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateShiftRight: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateShiftRight: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	| type |
@@ -2967,7 +2952,7 @@ RustCCodeGenerator >> generateShiftRight: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateSignedBitShift: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateSignedBitShift: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	| cast type arg shift |
@@ -2998,7 +2983,7 @@ RustCCodeGenerator >> generateSignedBitShift: msgNode on: aStream indent: level 
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateSignedIntFromLong64: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateSignedIntFromLong64: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: '((sqLong) '.
@@ -3007,7 +2992,7 @@ RustCCodeGenerator >> generateSignedIntFromLong64: msgNode on: aStream indent: l
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateSignedIntFromLong: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateSignedIntFromLong: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: '((int) '.
@@ -3016,7 +3001,7 @@ RustCCodeGenerator >> generateSignedIntFromLong: msgNode on: aStream indent: lev
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateSignedIntFromShort: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateSignedIntFromShort: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: '((short)'.
@@ -3025,7 +3010,7 @@ RustCCodeGenerator >> generateSignedIntFromShort: msgNode on: aStream indent: le
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateSignedIntToLong64: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateSignedIntToLong64: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: '((usqInt) '.
@@ -3034,7 +3019,7 @@ RustCCodeGenerator >> generateSignedIntToLong64: msgNode on: aStream indent: lev
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateSignedIntToLong: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateSignedIntToLong: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: '((usqInt) '.
@@ -3046,7 +3031,7 @@ RustCCodeGenerator >> generateSignedIntToLong: msgNode on: aStream indent: level
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateSignedIntToShort: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateSignedIntToShort: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: '((usqInt) (short)'.
@@ -3055,7 +3040,7 @@ RustCCodeGenerator >> generateSignedIntToShort: msgNode on: aStream indent: leve
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateSignedShiftRight: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateSignedShiftRight: msgNode on: aStream indent: level [
 	"Generate the C code for >>> onto the given stream."
 
 	(self is64BitIntegralVariable: msgNode receiver typeInto: [:t|])
@@ -3069,7 +3054,7 @@ RustCCodeGenerator >> generateSignedShiftRight: msgNode on: aStream indent: leve
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateSmallIntegerConstant: aSendNode on: aStream indent: indent [
+RustCodeGenerator >> generateSmallIntegerConstant: aSendNode on: aStream indent: indent [
 	aSendNode selector = #minSmallInteger ifTrue:
 		[^aStream nextPutAll: 'MinSmallInteger'].
 	aSendNode selector = #maxSmallInteger ifTrue:
@@ -3078,14 +3063,14 @@ RustCCodeGenerator >> generateSmallIntegerConstant: aSendNode on: aStream indent
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateSmalltalkMetaError: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateSmalltalkMetaError: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: 'error("'; nextPutAll: msgNode selector; nextPutAll: '")'
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateTimes: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateTimes: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	(self generateAsConstantExpression: msgNode on: aStream) ifFalse:
@@ -3101,7 +3086,7 @@ RustCCodeGenerator >> generateTimes: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateTimesRepeat: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateTimesRepeat: msgNode on: aStream indent: level [
 	"Generate while(1) { stmtList } "
 
 	msgNode receiver value timesRepeat:
@@ -3109,7 +3094,7 @@ RustCCodeGenerator >> generateTimesRepeat: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateToByDo: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateToByDo: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 	"N.B. MessageNode>>asTranslatorNodeIn: adds the limit var as a hidden fourth argument."
 	| blockExpr iterationVar limitExpr mayHaveSideEffects limitVar step |
@@ -3141,7 +3126,7 @@ RustCCodeGenerator >> generateToByDo: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateToByDoLimitExpression: limitExpr negative: negative on: aStream [
+RustCodeGenerator >> generateToByDoLimitExpression: limitExpr negative: negative on: aStream [
 	"Generate the limit expression for a to:do: or to:by:do:.
 	 If the limitExpr is of the form foo - 1 use < foo or > foo, as appropriate, instead of
 	 <= (foo - 1) or >= (foo - 1), so as to avoid underflowing an unsigned value to maxint."
@@ -3158,7 +3143,7 @@ RustCCodeGenerator >> generateToByDoLimitExpression: limitExpr negative: negativ
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateToDo: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateToDo: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	| iterationVar |
@@ -3177,13 +3162,13 @@ RustCCodeGenerator >> generateToDo: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateTouch: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateTouch: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream - which is to say absolutely nothing"
 
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateTruncateTo: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateTruncateTo: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	| arg |
@@ -3196,7 +3181,7 @@ RustCCodeGenerator >> generateTruncateTo: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateValue: aTSendNode on: aStream indent: level [
+RustCodeGenerator >> generateValue: aTSendNode on: aStream indent: level [
 	"Reduce [:formal ... :formalN| body ] value: actual ... value: actualN
 	 to body with formals substituted for by actuals."
 	| substitution substitutionDict newLabels |
@@ -3226,7 +3211,7 @@ RustCCodeGenerator >> generateValue: aTSendNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateValueAsArgument: aTSendNode on: aStream indent: level [
+RustCodeGenerator >> generateValueAsArgument: aTSendNode on: aStream indent: level [
 	"Reduce [:formal ... :formalN| body ] value: actual ... value: actualN
 	 to body with formals substituted for by actuals."
 	| substitution substitutionDict newLabels |
@@ -3250,7 +3235,7 @@ RustCCodeGenerator >> generateValueAsArgument: aTSendNode on: aStream indent: le
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateWhile: boolean loop: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateWhile: boolean loop: msgNode on: aStream indent: level [
 	"Generate while(cond) {stmtList} or while(!(cond)) {stmtList}."
 
 	aStream nextPutAll: 'while ('.
@@ -3265,7 +3250,7 @@ RustCCodeGenerator >> generateWhile: boolean loop: msgNode on: aStream indent: l
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateWhileFalse: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateWhileFalse: msgNode on: aStream indent: level [
 	"Generate C code for a loop in one of the following formats, as appropriate:
 		while(!(cond)) { stmtList }
 		do {stmtList} while(!(cond))
@@ -3279,7 +3264,7 @@ RustCCodeGenerator >> generateWhileFalse: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateWhileForeverBreakIf: breakBoolean loop: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateWhileForeverBreakIf: breakBoolean loop: msgNode on: aStream indent: level [
 	"Generate either of
 		while(1) {stmtListA; if(cond) break; stmtListB}
 		while(1) {stmtListA; if(!(cond)) break; stmtListB}."
@@ -3301,7 +3286,7 @@ RustCCodeGenerator >> generateWhileForeverBreakIf: breakBoolean loop: msgNode on
 ]
 
 { #category : #'C translation' }
-RustCCodeGenerator >> generateWhileTrue: msgNode on: aStream indent: level [
+RustCodeGenerator >> generateWhileTrue: msgNode on: aStream indent: level [
 	"Generate C code for a loop in one of the following formats, as appropriate:
 		while(cond) { stmtList }
 		do {stmtList} while(cond)
@@ -3315,14 +3300,14 @@ RustCCodeGenerator >> generateWhileTrue: msgNode on: aStream indent: level [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> globalsAsSet [
+RustCodeGenerator >> globalsAsSet [
 	"Used by the inliner to avoid name clashes with global variables."
 
 	^variables
 ]
 
 { #category : #'type inference' }
-RustCCodeGenerator >> harmonizeReturnTypesIn: aSetOfTypes [
+RustCodeGenerator >> harmonizeReturnTypesIn: aSetOfTypes [
 	"Eliminate signed/unsigned conflicts in aSetOfTypes. Non-negative integers can be either
 	 signed or unsigned. Ignore them unless there are no types, in which case default to sqInt."
 	| constantIntegers sqs usqs |
@@ -3346,7 +3331,7 @@ RustCCodeGenerator >> harmonizeReturnTypesIn: aSetOfTypes [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> ifStaticallyResolvedPolymorphicReceiverThenUpdateSelectorIn: aSendNode [
+RustCodeGenerator >> ifStaticallyResolvedPolymorphicReceiverThenUpdateSelectorIn: aSendNode [
 	"We allow a limited amount of polymorphism; if a class chooses, its selectoers can be
 	 prefixed with a given string to disambiguate. This hack allows us to use two different
 	 compaction algorithms with the same API at the same time; the selection being done
@@ -3362,7 +3347,7 @@ RustCCodeGenerator >> ifStaticallyResolvedPolymorphicReceiverThenUpdateSelectorI
 ]
 
 { #category : #'type inference' }
-RustCCodeGenerator >> implicitReturnTypeFor: aSelector [
+RustCodeGenerator >> implicitReturnTypeFor: aSelector [
 	"Answer the default return type for mthods of the defining class of
 	 aSelector. Default to #sqInt if there is no method, or if the method's
 	 defining class doesn't understand implicitReturnTypeFor:."
@@ -3377,13 +3362,13 @@ RustCCodeGenerator >> implicitReturnTypeFor: aSelector [
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> includeAPIFrom: aCCodeGenerator [
+RustCodeGenerator >> includeAPIFrom: aCCodeGenerator [
 	apiMethods := aCCodeGenerator selectAPIMethods.
 	apiVariables := aCCodeGenerator selectAPIVariables
 ]
 
 { #category : #'type inference' }
-RustCCodeGenerator >> inferTypesForImplicitlyTypedVariablesAndMethods [
+RustCodeGenerator >> inferTypesForImplicitlyTypedVariablesAndMethods [
 	"Infer the return tupe and the types of untyped variables.
 	 As far as variables go, for now we try only to infer variables
 	 assigned the result of #longLongAt:, but much more could be
@@ -3432,7 +3417,7 @@ RustCCodeGenerator >> inferTypesForImplicitlyTypedVariablesAndMethods [
 ]
 
 { #category : #'initialize-release' }
-RustCCodeGenerator >> initialize [
+RustCodeGenerator >> initialize [
 	translationDict := Dictionary new.
 	inlineList := Array new.
 	constants := Dictionary new: 100.
@@ -3458,7 +3443,7 @@ RustCCodeGenerator >> initialize [
 ]
 
 { #category : #'C translation support' }
-RustCCodeGenerator >> initializeCTranslationDictionary [ 
+RustCodeGenerator >> initializeCTranslationDictionary [ 
 	"Initialize the dictionary mapping message names to actions for C code generation."
 
 	| pairs |
@@ -3636,7 +3621,7 @@ RustCCodeGenerator >> initializeCTranslationDictionary [
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> initializerForInstVar: varName in: aClass [
+RustCodeGenerator >> initializerForInstVar: varName in: aClass [
 	| instVarIndex |
 	instVarIndex := aClass instVarIndexFor: varName ifAbsent: [^nil].
 	aClass selectorsAndMethodsDo:
@@ -3656,7 +3641,7 @@ RustCCodeGenerator >> initializerForInstVar: varName in: aClass [
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> initializerForInstVar: varName inStartClass: aClass [
+RustCodeGenerator >> initializerForInstVar: varName inStartClass: aClass [
 	| allClasses sizeBefore |
 	(aClass inheritsFrom: VMClass) ifFalse:
 		[^false].
@@ -3676,7 +3661,7 @@ RustCCodeGenerator >> initializerForInstVar: varName inStartClass: aClass [
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> inlineDispatchesInMethodNamed: selector localizingVars: varsList [
+RustCodeGenerator >> inlineDispatchesInMethodNamed: selector localizingVars: varsList [
 	"Inline dispatches (case statements) in the method with the given name."
 
 	| m |
@@ -3701,7 +3686,7 @@ RustCCodeGenerator >> inlineDispatchesInMethodNamed: selector localizingVars: va
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> instVarNamesForClass: aClass [
+RustCodeGenerator >> instVarNamesForClass: aClass [
 	^vmClass
 		ifNil: [aClass instVarNames]
 		ifNotNil: [aClass instVarNames reject:
@@ -3709,12 +3694,12 @@ RustCCodeGenerator >> instVarNamesForClass: aClass [
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> interpreterVersion [
+RustCodeGenerator >> interpreterVersion [
 	^self vmClass interpreterVersion, '[', self vmClass objectMemoryClass memoryManagerVersion, ']'
 ]
 
 { #category : #'C translation support' }
-RustCCodeGenerator >> is64BitIntegralVariable: node typeInto: aBlock [
+RustCodeGenerator >> is64BitIntegralVariable: node typeInto: aBlock [
 	| decl |
 	^node isVariable
 	  and: [(decl := self typeOfVariable: node name) notNil
@@ -3727,7 +3712,7 @@ RustCCodeGenerator >> is64BitIntegralVariable: node typeInto: aBlock [
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> isActualType: actualTypeOrNil compatibleWithFormalType: formalTypeOrNil [ 
+RustCodeGenerator >> isActualType: actualTypeOrNil compatibleWithFormalType: formalTypeOrNil [ 
 	| actualType formalType |
 	actualType := actualTypeOrNil ifNil: [#sqInt].
 	formalType := formalTypeOrNil ifNil: [#sqInt].
@@ -3743,19 +3728,19 @@ RustCCodeGenerator >> isActualType: actualTypeOrNil compatibleWithFormalType: fo
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> isAssertSelector: selector [
+RustCodeGenerator >> isAssertSelector: selector [
 	^#(assert: asserta: assert:l: asserta:l: deny: eassert:) includes: selector
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> isBuiltinSelector: sel [
+RustCodeGenerator >> isBuiltinSelector: sel [
 	"Answer true if the given selector is one of the builtin selectors."
 
 	^(self isKernelSelector: sel) or: [translationDict includesKey: sel]
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> isCLiteral: anObject [
+RustCodeGenerator >> isCLiteral: anObject [
 	anObject isInteger ifTrue: [^true].
 	anObject isString ifTrue: [^true].
 	anObject isFloat ifTrue: [^true].
@@ -3767,7 +3752,7 @@ RustCCodeGenerator >> isCLiteral: anObject [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> isConstantNode: aNode valueInto: aBlock [
+RustCodeGenerator >> isConstantNode: aNode valueInto: aBlock [
 	"Answer if aNode evaluates to a constant, and if so, evaluate aBlock with the value of that constant."
 
 	aNode isConstant ifTrue:
@@ -3800,28 +3785,28 @@ RustCCodeGenerator >> isConstantNode: aNode valueInto: aBlock [
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> isFloatingPointCType: aCType [ "<String>"
+RustCodeGenerator >> isFloatingPointCType: aCType [ "<String>"
 	^#('float' 'double' 'long double') includes: aCType asString
 ]
 
 { #category : #'type inference' }
-RustCCodeGenerator >> isFunctionalCType: aType [
+RustCodeGenerator >> isFunctionalCType: aType [
 	"Answer if aType is either a function or a pointer to a function."
 	^aType last == $) and: [(aType indexOf: $() > 0]
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> isGeneratingPluginCode [
+RustCodeGenerator >> isGeneratingPluginCode [
 	^false
 ]
 
 { #category : #public }
-RustCCodeGenerator >> isGlobalStructureBuild [
+RustCodeGenerator >> isGlobalStructureBuild [
 	^false
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> isIntegralCType: aCType [ "<String>"
+RustCodeGenerator >> isIntegralCType: aCType [ "<String>"
 	^(#('sqLong' 'usqLong' 'sqInt' 'usqInt' 'sqIntptr_t' 'usqIntptr_t'
 		'long' 'long long' 'int' 'short' 'short int' 'char' 'signed char'
 		'size_t' 'pid_t') includes: aCType asString)
@@ -3830,7 +3815,7 @@ RustCCodeGenerator >> isIntegralCType: aCType [ "<String>"
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> isKernelSelector: sel [
+RustCodeGenerator >> isKernelSelector: sel [
 	"Answer true if the given selector is one of the kernel selectors that are implemented as macros."
 
 	^(#(error:
@@ -3848,7 +3833,7 @@ RustCCodeGenerator >> isKernelSelector: sel [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> isNilConstantReceiverOf: sendNode [
+RustCodeGenerator >> isNilConstantReceiverOf: sendNode [
 	"Answer true if the receiver of the given message send is the constant nil. Used to suppress conditional code when the condition is a translation-time constant."
 
 	| val |
@@ -3858,7 +3843,7 @@ RustCCodeGenerator >> isNilConstantReceiverOf: sendNode [
 ]
 
 { #category : #'type inference' }
-RustCCodeGenerator >> isNode: aNode constantValueWithinRangeOfType: aType [
+RustCodeGenerator >> isNode: aNode constantValueWithinRangeOfType: aType [
 	"Answer if aNode is a constant value within the range of an integral type.
 	 If aNode isn't an integral constant or aType isn't an integral type then answer false."
 	| value |
@@ -3872,7 +3857,7 @@ RustCCodeGenerator >> isNode: aNode constantValueWithinRangeOfType: aType [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> isNonArgumentImplicitReceiverVariableName: aString [
+RustCodeGenerator >> isNonArgumentImplicitReceiverVariableName: aString [
 	^(self typeOfVariable: aString) == #implicit
 	    or: [vmClass
 			ifNil: [#('interpreterProxy' 'self') includes: aString]
@@ -3880,24 +3865,24 @@ RustCCodeGenerator >> isNonArgumentImplicitReceiverVariableName: aString [
 ]
 
 { #category : #'spur primitive compilation' }
-RustCCodeGenerator >> isObjectAccessor: selector given: interpreterClass [
+RustCodeGenerator >> isObjectAccessor: selector given: interpreterClass [
 	^interpreterClass isObjectAccessor: selector
 ]
 
 { #category : #'type inference' }
-RustCCodeGenerator >> isPointerCType: aType [
+RustCodeGenerator >> isPointerCType: aType [
 	^aType last == $*
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> isQuickCompiledMethod: aCompiledMethod [
+RustCodeGenerator >> isQuickCompiledMethod: aCompiledMethod [
 	^aCompiledMethod isQuick
 	 or: [(#(pushConstant: pushLiteralVariable:) includes: (aCompiledMethod abstractBytecodeMessageAt: aCompiledMethod initialPC) selector)
 		and: [(aCompiledMethod abstractBytecodeMessageAt: (InstructionStream on: aCompiledMethod) followingPc) selector == #methodReturnTop]]
 ]
 
 { #category : #'type inference' }
-RustCCodeGenerator >> isSimpleType: aType [
+RustCodeGenerator >> isSimpleType: aType [
 	"For the purposes of the read-before-written initializer, answer if
 	 aType is simple, e.g. not a structure, and array or an opaque type."
 	^(self isPointerCType: aType)
@@ -3905,18 +3890,18 @@ RustCCodeGenerator >> isSimpleType: aType [
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> isSpecialSelector: aSelector [
+RustCodeGenerator >> isSpecialSelector: aSelector [
 		
 	^ translationDict includesKey: aSelector
 ]
 
 { #category : #'spur primitive compilation' }
-RustCCodeGenerator >> isStackAccessor: selector given: interpreterClass [
+RustCodeGenerator >> isStackAccessor: selector given: interpreterClass [
 	^interpreterClass isStackAccessor: selector
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> isStructSend: aTSendNode [
+RustCodeGenerator >> isStructSend: aTSendNode [
 	"Answer if the argument aTSendNode is a send of a structure accessor.
 	 This is tricky.  We want
 		foo bar => foo->bar
@@ -3935,13 +3920,13 @@ RustCCodeGenerator >> isStructSend: aTSendNode [
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> isVoidPointer: aCType [ "<String>"
+RustCodeGenerator >> isVoidPointer: aCType [ "<String>"
 	"sigh..."
 	^#('void *' 'void*') includes: aCType asString
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> localizeGlobalVariables [
+RustCodeGenerator >> localizeGlobalVariables [
 	| candidates elected localized |
 
 	"find all globals used in only one method"
@@ -3986,24 +3971,24 @@ RustCCodeGenerator >> localizeGlobalVariables [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> logger [
+RustCodeGenerator >> logger [
 	^logger
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> logger: aTranscriptStream [
+RustCodeGenerator >> logger: aTranscriptStream [
 	logger := aTranscriptStream
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> mayInline: sel [
+RustCodeGenerator >> mayInline: sel [
 	"Answer if the method with the given selector may be inlined."
 
 	^(self isAssertSelector: sel) not and: [inlineList includes: sel]
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> maybeBreakForInlineOf: aNode in: aTMethod [
+RustCodeGenerator >> maybeBreakForInlineOf: aNode in: aTMethod [
 	"convenient for debugging..."
 	(aNode isSend
 	and: [breakSrcInlineSelectors size + breakDestInlineSelectors size > 0
@@ -4014,7 +3999,7 @@ RustCCodeGenerator >> maybeBreakForInlineOf: aNode in: aTMethod [
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> maybeBreakForTestOfInliningOf: aNodeOrSelector [
+RustCodeGenerator >> maybeBreakForTestOfInliningOf: aNodeOrSelector [
 	"convenient for debugging..."
 	| selector |
 	selector := aNodeOrSelector isSymbol
@@ -4030,7 +4015,7 @@ RustCCodeGenerator >> maybeBreakForTestOfInliningOf: aNodeOrSelector [
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> maybeBreakForTestToInline: aNodeOrSelector in: aTMethod [
+RustCodeGenerator >> maybeBreakForTestToInline: aNodeOrSelector in: aTMethod [
 	"convenient for debugging..."
 	| selector |
 	selector := aNodeOrSelector isSymbol
@@ -4047,7 +4032,7 @@ RustCCodeGenerator >> maybeBreakForTestToInline: aNodeOrSelector in: aTMethod [
 ]
 
 { #category : #'C translation support' }
-RustCCodeGenerator >> maybeEmitPrimitiveFailureDefineFor: selector on: aStream [
+RustCodeGenerator >> maybeEmitPrimitiveFailureDefineFor: selector on: aStream [
 	 (vmClass notNil
 	 and: [(vmClass inheritsFrom: InterpreterPrimitives)
 	 and: [(vmClass primitiveTable includes: selector)]]) ifTrue:
@@ -4055,7 +4040,7 @@ RustCCodeGenerator >> maybeEmitPrimitiveFailureDefineFor: selector on: aStream [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> maybePutPreambleFor: aClass on: aStream [
+RustCodeGenerator >> maybePutPreambleFor: aClass on: aStream [
 	aClass preambleCCode ifNotNil:
 		[:preamble| | actualClass |
 		 actualClass := aClass class whichClassIncludesSelector: #preambleCCode.
@@ -4067,7 +4052,7 @@ RustCCodeGenerator >> maybePutPreambleFor: aClass on: aStream [
 ]
 
 { #category : #'type inference' }
-RustCCodeGenerator >> mergeTypeOf: var in: aDictionary with: newType method: tMethod [
+RustCodeGenerator >> mergeTypeOf: var in: aDictionary with: newType method: tMethod [
 	"var is a variable that has been assigned an expression of type  newType.
 	 Either assign its type, if it is as yet untyped, or merge newType with its existing type.
 	 N.B. We refuse to promote a variable that already has integral type to a floating point
@@ -4092,7 +4077,7 @@ RustCCodeGenerator >> mergeTypeOf: var in: aDictionary with: newType method: tMe
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> messageReceiverIsInterpreterProxy: sendNode [
+RustCodeGenerator >> messageReceiverIsInterpreterProxy: sendNode [
 	^self isGeneratingPluginCode
 	  and: [sendNode receiver isVariable
 	  and: ['interpreterProxy' = sendNode receiver name
@@ -4100,14 +4085,14 @@ RustCCodeGenerator >> messageReceiverIsInterpreterProxy: sendNode [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> methodNamed: selector [
+RustCodeGenerator >> methodNamed: selector [
 	"Answer the method in the code base with the given selector."
 
 	^ methods at: selector ifAbsent: [ nil ]
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> methodStatsString [
+RustCodeGenerator >> methodStatsString [
 	"Return a string describing the size, # of locals, and # of senders of
 	 each method. Note methods that have inline C code or C declarations."
 
@@ -4160,14 +4145,14 @@ RustCCodeGenerator >> methodStatsString [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> methodsForDefiningClass: dc [
+RustCodeGenerator >> methodsForDefiningClass: dc [
 	"Answer a collection of methods that refer to the given global variable."
 
 	^methods select: [:tMethod| tMethod definingClass == dc]
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> methodsReferringToGlobal: v [
+RustCodeGenerator >> methodsReferringToGlobal: v [
 	"Return a collection of methods that refer to the given global variable."
 
 	| out |
@@ -4181,7 +4166,7 @@ RustCCodeGenerator >> methodsReferringToGlobal: v [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> methodsThatCanInvoke: aSelectorList [
+RustCodeGenerator >> methodsThatCanInvoke: aSelectorList [
 	"Return a set of methods that can invoke one of the given selectors, either directly or via a sequence of intermediate methods."
 
 	| out todo sel |
@@ -4205,7 +4190,7 @@ RustCCodeGenerator >> methodsThatCanInvoke: aSelectorList [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> needToGenerateHeader: headerName file: interpHdrPath contents: newContentsArg [
+RustCodeGenerator >> needToGenerateHeader: headerName file: interpHdrPath contents: newContentsArg [
 	"Check if we need to regenerate a header file.  We always need to if the contents have changed.
 	 But if not we can avoid needless recompilations by not regenerating.  So only regenerate if the
 	 package stamp is dirty and the monticello stamp is clean."
@@ -4229,7 +4214,7 @@ RustCCodeGenerator >> needToGenerateHeader: headerName file: interpHdrPath conte
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> nilOrBooleanConditionFor: nodeOrNil [
+RustCodeGenerator >> nilOrBooleanConditionFor: nodeOrNil [
 	"If nodeOrNil is one of the conditional sends for which we do translation-time dead code elimination
 	 (i.e. cppIf:ifTrue: et al or ifTrue: et al) and the conditional does evaluate to a translation-time
 	 boolean constant, answer that constant, otherwise answer nil.  Used to prune dead code,
@@ -4266,7 +4251,7 @@ RustCCodeGenerator >> nilOrBooleanConditionFor: nodeOrNil [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> nilOrBooleanConstantReceiverOf: aNode [
+RustCodeGenerator >> nilOrBooleanConstantReceiverOf: aNode [
 	"Answer nil or the boolean constant that is the receiver of the given message send.
 	 Used to suppress conditional code when the condition is a translation-time constant."
 
@@ -4336,7 +4321,7 @@ RustCCodeGenerator >> nilOrBooleanConstantReceiverOf: aNode [
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> node: exprNode typeCompatibleWith: argName inliningInto: targetMethod in: aTMethod [
+RustCodeGenerator >> node: exprNode typeCompatibleWith: argName inliningInto: targetMethod in: aTMethod [
 	"Answer either exprNode or, if required, a cast of exprNode to the type of argName.
 	 The cast is required if
 		- argName is typed and exprNode is untyped
@@ -4365,7 +4350,7 @@ RustCCodeGenerator >> node: exprNode typeCompatibleWith: argName inliningInto: t
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> nodeIsDeadCode: aNode withParent: parentNode [
+RustCodeGenerator >> nodeIsDeadCode: aNode withParent: parentNode [
 	"Answer if aNode would not be generated due to dead code elimination."
 	^(self nilOrBooleanConditionFor: parentNode)
 		ifNil: [false]
@@ -4388,7 +4373,7 @@ RustCCodeGenerator >> nodeIsDeadCode: aNode withParent: parentNode [
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> nodeToCast: exprNode to: cType [
+RustCodeGenerator >> nodeToCast: exprNode to: cType [
 	^RustTSendNode new
 		setSelector: #cCoerceSimple:to:
 		receiver: (RustTVariableNode new setName: 'self')
@@ -4397,7 +4382,7 @@ RustCCodeGenerator >> nodeToCast: exprNode to: cType [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> nonStructClassesForTranslationClasses: classes [
+RustCodeGenerator >> nonStructClassesForTranslationClasses: classes [
 	"Answer in superclass order (any superclass precedes any subclass)
 	 the ancilliaryClasses that are not struct classes for all the given classes."
 	| nonStructClasses |
@@ -4420,13 +4405,13 @@ RustCCodeGenerator >> nonStructClassesForTranslationClasses: classes [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> noteUsedVariableName: variableName [
+RustCodeGenerator >> noteUsedVariableName: variableName [
 	currentMethod ifNotNil:
 		[:m| m noteUsedVariableName: variableName]
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> noteVariableUsageInString: aString [
+RustCodeGenerator >> noteVariableUsageInString: aString [
 	currentMethod ifNotNil:
 		[:m|
 		 (Scanner new typedScanTokens: aString) do:
@@ -4436,7 +4421,7 @@ RustCCodeGenerator >> noteVariableUsageInString: aString [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> optionIsTrue: pragma in: aClass [
+RustCodeGenerator >> optionIsTrue: pragma in: aClass [
 	"Answer whether an option: or notOption: pragma is true in the context of aClass.
 	 The argument to the option: pragma is interpreted as either a Cogit class name
 	 or a class variable name or a variable name in VMBasicConstants."
@@ -4476,12 +4461,12 @@ RustCCodeGenerator >> optionIsTrue: pragma in: aClass [
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> options [
+RustCodeGenerator >> options [
 	^optionsDictionary
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> options: aDictionary [
+RustCodeGenerator >> options: aDictionary [
 	"Set optionsDictionary to the argument and scan it for accessors on the receiver,
 	 performing the accessor with the value, allowing one to specify things like
 	 generateDeadCode: false in the options."
@@ -4495,7 +4480,7 @@ RustCCodeGenerator >> options: aDictionary [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> outputAsmLabel: selector on: aStream [
+RustCodeGenerator >> outputAsmLabel: selector on: aStream [
 	| count |
 	suppressAsmLabels ifTrue: [^self].
 	asmLabelCounts ifNil:
@@ -4512,7 +4497,7 @@ RustCCodeGenerator >> outputAsmLabel: selector on: aStream [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
+RustCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 	"Put the necessary #defines needed before interpreterProxy.  Basically
 	 internal plugins use the VM's interpreterProxy variable and external plugins use
 	 their own.  In addition the VMPluginCodeGenerator can choose to keep local copies
@@ -4523,7 +4508,7 @@ RustCCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> prepareMethods [
+RustCodeGenerator >> prepareMethods [
 	| globals |
 	globals := Set new: 200.
 	globals addAll: variables.
@@ -4545,12 +4530,12 @@ RustCCodeGenerator >> prepareMethods [
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> previousCommentMarksInlining [
+RustCodeGenerator >> previousCommentMarksInlining [
 	^previousCommentMarksInlining
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> previousCommentMarksInlining: aBoolean [
+RustCodeGenerator >> previousCommentMarksInlining: aBoolean [
 	| previousValue |
 	previousValue := previousCommentMarksInlining.
 	previousCommentMarksInlining := aBoolean.
@@ -4558,12 +4543,12 @@ RustCCodeGenerator >> previousCommentMarksInlining: aBoolean [
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> previousCommenter [
+RustCodeGenerator >> previousCommenter [
 	^previousCommenter
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> previousCommenter: aTParseNodeOrNil [
+RustCodeGenerator >> previousCommenter: aTParseNodeOrNil [
 	| previousValue |
 	previousValue := previousCommenter.
 	previousCommenter := aTParseNodeOrNil.
@@ -4571,7 +4556,7 @@ RustCCodeGenerator >> previousCommenter: aTParseNodeOrNil [
 ]
 
 { #category : #'error notification' }
-RustCCodeGenerator >> printUnboundCallWarnings [
+RustCodeGenerator >> printUnboundCallWarnings [
 	"Print a warning message for every unbound method call in the code base."
 
 	| knownSelectors undefinedCalls |
@@ -4599,7 +4584,7 @@ RustCCodeGenerator >> printUnboundCallWarnings [
 ]
 
 { #category : #'error notification' }
-RustCCodeGenerator >> printUnboundVariableReferenceWarnings [
+RustCodeGenerator >> printUnboundVariableReferenceWarnings [
 	"Print a warning message for every unbound variable reference in the code base."
 
 	| undefinedRefs globalVars |
@@ -4629,7 +4614,7 @@ RustCCodeGenerator >> printUnboundVariableReferenceWarnings [
 ]
 
 { #category : #'type inference' }
-RustCCodeGenerator >> promoteArithmeticTypes: firstType and: secondType [
+RustCodeGenerator >> promoteArithmeticTypes: firstType and: secondType [
 	"Answer the return type for an arithmetic send.  This is so that the inliner can still inline
 	 simple expressions.  Deal with pointer arithmetic, floating point arithmetic and promotion.
 	 It is important to choose deterministically to get stable source generation.
@@ -4647,7 +4632,7 @@ RustCCodeGenerator >> promoteArithmeticTypes: firstType and: secondType [
 ]
 
 { #category : #'type inference' }
-RustCCodeGenerator >> promoteIntegerArithmeticTypes: firstType and: secondType [
+RustCodeGenerator >> promoteIntegerArithmeticTypes: firstType and: secondType [
 	"Answer the return type for an arithmetic send.
 	Deal with integer promotion rules of C99.
 	See section 6.3 Conversions of the standard.
@@ -4692,13 +4677,13 @@ RustCCodeGenerator >> promoteIntegerArithmeticTypes: firstType and: secondType [
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> pruneMethods: selectorList [
+RustCodeGenerator >> pruneMethods: selectorList [
 	"Explicitly prune some methods"
 	selectorList do: [:sel| self removeMethodForSelector: sel]
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> pruneUnreachableMethods [
+RustCodeGenerator >> pruneUnreachableMethods [
 	"Remove any methods that are not reachable. Retain methods needed by the translated classes - see implementors of requiredMethodNames"
  	
 	| neededSelectors newMethods previousSize visited |
@@ -4740,13 +4725,13 @@ RustCCodeGenerator >> pruneUnreachableMethods [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> pushScope: variableToType "<Dictionary>" while: aBlock [
+RustCodeGenerator >> pushScope: variableToType "<Dictionary>" while: aBlock [
 	scopeStack addLast: variableToType.
 	^aBlock ensure: [scopeStack removeLast]
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> putConditionalDefineOf: aConstantNameString as: valueOrValueString comment: commentOrNil on: aStream [
+RustCodeGenerator >> putConditionalDefineOf: aConstantNameString as: valueOrValueString comment: commentOrNil on: aStream [
 	self withConditionalDefineOf: aConstantNameString
 		comment: commentOrNil
 		on: aStream
@@ -4758,7 +4743,7 @@ RustCCodeGenerator >> putConditionalDefineOf: aConstantNameString as: valueOrVal
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> putDefineOf: aConstantNameString as: valueOrValueString on: aStream [
+RustCodeGenerator >> putDefineOf: aConstantNameString as: valueOrValueString on: aStream [
 	aStream
 		nextPutAll: '#define ';
 		nextPutAll: aConstantNameString;
@@ -4768,7 +4753,7 @@ RustCCodeGenerator >> putDefineOf: aConstantNameString as: valueOrValueString on
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> removeAssertions [
+RustCodeGenerator >> removeAssertions [
 	"Remove all assertions in method bodies.  This is for the benefit of inlining, which
 	fails to recognise and disregard empty method bodies when checking the inlinability
 	of sends."
@@ -4788,14 +4773,14 @@ RustCCodeGenerator >> removeAssertions [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> removeConstant: aName [
+RustCodeGenerator >> removeConstant: aName [
 	"Remove the given (class) variable from the code base."
 
 	constants removeKey:  aName ifAbsent: []
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> removeMethodForSelector: aSelector [
+RustCodeGenerator >> removeMethodForSelector: aSelector [
 	"Remove the given method from the code base"
 	((breakSrcInlineSelectors includes: aSelector)
 	 or: [(breakDestInlineSelectors includes: aSelector)]) ifTrue:
@@ -4804,7 +4789,7 @@ RustCCodeGenerator >> removeMethodForSelector: aSelector [
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> removeMethodsReferingToGlobals: varList except: methodName [
+RustCodeGenerator >> removeMethodsReferingToGlobals: varList except: methodName [
 	"Remove any methods (presumably inlined) that still contain references to the given
 	 global variables. Answer a Dictionary of the removed methods for later reporting."
 
@@ -4823,7 +4808,7 @@ RustCCodeGenerator >> removeMethodsReferingToGlobals: varList except: methodName
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> removeVariable: aName [
+RustCodeGenerator >> removeVariable: aName [
 	"Remove the given (instance) variable from the code base."
 	self removeVariable: aName
 		ifAbsent:
@@ -4838,7 +4823,7 @@ RustCCodeGenerator >> removeVariable: aName [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> removeVariable: aName ifAbsent: ifAbsentBlock [
+RustCodeGenerator >> removeVariable: aName ifAbsent: ifAbsentBlock [
 	"Remove the given (instance) variable from the code base."
 	self checkDeleteVariable: aName.
 	variableDeclarations removeKey: aName ifAbsent: [].
@@ -4846,7 +4831,7 @@ RustCCodeGenerator >> removeVariable: aName ifAbsent: ifAbsentBlock [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> reportRecursiveMethods [
+RustCodeGenerator >> reportRecursiveMethods [
 	"Report in transcript all methods that can call themselves directly or indirectly or via a chain of N intermediate methods."
 
 	methods do: [: m | | visited calls newCalls sel called |
@@ -4872,7 +4857,7 @@ RustCCodeGenerator >> reportRecursiveMethods [
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> reportShouldNotBeRemoved: removed varList: varList [
+RustCodeGenerator >> reportShouldNotBeRemoved: removed varList: varList [
 	"Report whether any of the removed methods are still used."
 	| varListAsStrings shouldNotBeRemoved |
 	varListAsStrings := varList collect: [ :sym | sym asString ].
@@ -4920,7 +4905,7 @@ RustCCodeGenerator >> reportShouldNotBeRemoved: removed varList: varList [
 ]
 
 { #category : #'C translation support' }
-RustCCodeGenerator >> reservedWords [
+RustCodeGenerator >> reservedWords [
 	^#(	'auto'
 		'break'
 		'case' 'char' 'const' 'continue'
@@ -4939,7 +4924,7 @@ RustCCodeGenerator >> reservedWords [
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> retainMethods: aListOfSelectorsToKeep [
+RustCodeGenerator >> retainMethods: aListOfSelectorsToKeep [
 	"add aListOfSelectorsToKeep to requiredSelectors so that they will not be pruned"
 	requiredSelectors ifNil:[requiredSelectors := Set new:100].
 	requiredSelectors addAll: aListOfSelectorsToKeep.
@@ -4947,12 +4932,12 @@ RustCCodeGenerator >> retainMethods: aListOfSelectorsToKeep [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> returnPrefixFromVariable: aName [
+RustCodeGenerator >> returnPrefixFromVariable: aName [
 	^aName
 ]
 
 { #category : #'type inference' }
-RustCCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
+RustCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
 	"Answer the return type for a send.  Unbound sends default to typeIfNil.
 	 Methods with types as yet unknown have a type determined either by the
 	 kernelReturnTypes or the table below, or, if they are in neither set, then nil.
@@ -5047,17 +5032,17 @@ RustCCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil 
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> selectAPIMethods [
+RustCodeGenerator >> selectAPIMethods [
 	^methods select: [:m| m isAPIMethod]
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> selectAPIVariables [
+RustCodeGenerator >> selectAPIVariables [
 	^variableDeclarations reject: [:decl| decl includesSubstring: 'static ']
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> selectorReturnsPointerToStruct: selector [ "<Symbol>"
+RustCodeGenerator >> selectorReturnsPointerToStruct: selector [ "<Symbol>"
 	| tMethod |
 	^(tMethod := methods
 					at: selector
@@ -5068,7 +5053,7 @@ RustCCodeGenerator >> selectorReturnsPointerToStruct: selector [ "<Symbol>"
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> selectorReturnsStruct: selector [ "<Symbol>"
+RustCodeGenerator >> selectorReturnsStruct: selector [ "<Symbol>"
 	| tMethod |
 	^(tMethod := methods
 					at: selector
@@ -5079,31 +5064,31 @@ RustCCodeGenerator >> selectorReturnsStruct: selector [ "<Symbol>"
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> selectorsAndMethodsDo: aBinaryBlock [
+RustCodeGenerator >> selectorsAndMethodsDo: aBinaryBlock [
 	methods keysAndValuesDo: aBinaryBlock
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> shortMonticelloDescriptionForClass: aClass [
+RustCodeGenerator >> shortMonticelloDescriptionForClass: aClass [
 	"Answer a suitable Monticello package stamp to include in a moduleName."
 	^self class shortMonticelloDescriptionForClass: aClass
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> shouldGenerateAsInterpreterProxySend: aSendNode [
+RustCodeGenerator >> shouldGenerateAsInterpreterProxySend: aSendNode [
 	^(self messageReceiverIsInterpreterProxy: aSendNode)
 	  and: [(VMBasicConstants mostBasicConstantSelectors includes: aSendNode selector) not]
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> shouldGenerateMethod: aTMethod [
+RustCodeGenerator >> shouldGenerateMethod: aTMethod [
 	^(self isBuiltinSelector: aTMethod selector)
 		ifTrue: [requiredSelectors includes: aTMethod selector]
 		ifFalse: [aTMethod inline ~~ #always]
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> shouldIncludeMethodFor: aClass selector: selector [
+RustCodeGenerator >> shouldIncludeMethodFor: aClass selector: selector [
 	"Answer whether a method shoud be translated.  Process optional methods by
 	 interpreting the argument to the option: pragma as either a Cogit class name
 	 or a class variable name or a variable name in VMBasicConstants.  Exclude
@@ -5123,7 +5108,7 @@ RustCCodeGenerator >> shouldIncludeMethodFor: aClass selector: selector [
 ]
 
 { #category : #'type inference' }
-RustCCodeGenerator >> signedTypeForIntegralType: aCTypeString [
+RustCodeGenerator >> signedTypeForIntegralType: aCTypeString [
 	(aCTypeString beginsWith: 'unsigned ') ifTrue:
 		[^aCTypeString allButFirst: 8].
 	
@@ -5137,7 +5122,7 @@ RustCCodeGenerator >> signedTypeForIntegralType: aCTypeString [
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> sizeOfIntegralCType: anIntegralCType [ "<String>"
+RustCodeGenerator >> sizeOfIntegralCType: anIntegralCType [ "<String>"
 	"N.B. Only works for values for which isIntegralCType: answers true."
 	| prunedCType index |
 	(anIntegralCType beginsWith: 'register ') ifTrue:
@@ -5173,7 +5158,7 @@ RustCCodeGenerator >> sizeOfIntegralCType: anIntegralCType [ "<String>"
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> sortMethods: aTMethodCollection [
+RustCodeGenerator >> sortMethods: aTMethodCollection [
 	"We need to define this since different Squeak versions answer different results
 	 for asSortedCollection and if sort order changes, generated code changes too.
 	 When generating VM code, use class name as major sort index as this groups
@@ -5191,20 +5176,20 @@ RustCCodeGenerator >> sortMethods: aTMethodCollection [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> sortStrings: aStringOrSymbolCollection [
+RustCodeGenerator >> sortStrings: aStringOrSymbolCollection [
 	"We need to define this since different Squeak versions answer different results
 	 for asSortedCollection and if sort order changes, generated code changes too."
 	^aStringOrSymbolCollection asSortedCollection: [:a :b| a caseSensitiveLessOrEqual: b]
 ]
 
 { #category : #public }
-RustCCodeGenerator >> sortedExportMethods [
+RustCodeGenerator >> sortedExportMethods [
 	"Answer a suitably-sorted array of all exported TMethods"
 	^(methods select: [:m| m export]) asSortedCollection: [:a :b| a selector caseSensitiveLessOrEqual: b selector]
 ]
 
 { #category : #public }
-RustCCodeGenerator >> staticallyResolveMethodNamed: selector forClass: aClass to: staticallyResolvedSelector [
+RustCodeGenerator >> staticallyResolveMethodNamed: selector forClass: aClass to: staticallyResolvedSelector [
 	"We allow a limited amount of polymorphism; if a class chooses, its selectoers can be
 	 prefixed with a given string to disambiguate. This hack allows us to use two different
 	 compaction algorithms with the same API at the same time; the selection being done
@@ -5220,7 +5205,7 @@ RustCCodeGenerator >> staticallyResolveMethodNamed: selector forClass: aClass to
 ]
 
 { #category : #public }
-RustCCodeGenerator >> staticallyResolvedPolymorphicReceiver: variableName to: aClass [
+RustCodeGenerator >> staticallyResolvedPolymorphicReceiver: variableName to: aClass [
 	"We allow a limited amount of polymorphism; if a class chooses, its selectoers can be
 	 prefixed with a given string to disambiguate. This hack allows us to use two different
 	 compaction algorithms with the same API at the same time; the selection being done
@@ -5231,7 +5216,7 @@ RustCCodeGenerator >> staticallyResolvedPolymorphicReceiver: variableName to: aC
 ]
 
 { #category : #'C translation support' }
-RustCCodeGenerator >> stepExpressionIsNegative: aNode [
+RustCodeGenerator >> stepExpressionIsNegative: aNode [
 	"Answer if the step expression (the by: argument in a to:by:do:) is negative."
 	self isConstantNode: aNode valueInto: [:stepValue| ^stepValue < 0].
 	(aNode isSend and: [aNode selector == #negated]) ifTrue:
@@ -5240,7 +5225,7 @@ RustCCodeGenerator >> stepExpressionIsNegative: aNode [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> storeAPIExportHeader: headerName OnFile: fullHeaderPath [
+RustCodeGenerator >> storeAPIExportHeader: headerName OnFile: fullHeaderPath [
 	"Store C header code on the given file. Evaluate
 	 aBlock with the stream to generate its contents."
 
@@ -5254,14 +5239,14 @@ RustCCodeGenerator >> storeAPIExportHeader: headerName OnFile: fullHeaderPath [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> storeCodeOnFile: fileName doInlining: inlineFlag [
+RustCodeGenerator >> storeCodeOnFile: fileName doInlining: inlineFlag [
 	"Store C code for this code base on the given file."
 
 	self storeCodeOnFile: fileName doInlining: inlineFlag doAssertions: true
 ]
 
 { #category : #public }
-RustCCodeGenerator >> storeCodeOnFile: fileName doInlining: inlineFlag doAssertions: assertionFlag [
+RustCodeGenerator >> storeCodeOnFile: fileName doInlining: inlineFlag doAssertions: assertionFlag [
 	"Store C code for this code base on the given file."
 
 	| stream |
@@ -5272,7 +5257,7 @@ RustCCodeGenerator >> storeCodeOnFile: fileName doInlining: inlineFlag doAsserti
 ]
 
 { #category : #public }
-RustCCodeGenerator >> storeHeaderOnFile: fileName contents: contents [
+RustCodeGenerator >> storeHeaderOnFile: fileName contents: contents [
 	"Store C header code on the given file. Evaluate
 	 aBlock with the stream to generate its contents."
 
@@ -5286,7 +5271,7 @@ RustCCodeGenerator >> storeHeaderOnFile: fileName contents: contents [
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> structAccessorSelectors [
+RustCodeGenerator >> structAccessorSelectors [
 		
 	^ methods
 		select: [ :m | m isStructAccessor ]
@@ -5294,12 +5279,12 @@ RustCCodeGenerator >> structAccessorSelectors [
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> structClasses [
+RustCodeGenerator >> structClasses [
 	^structClasses
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> structClassesForTranslationClasses: classes [
+RustCodeGenerator >> structClassesForTranslationClasses: classes [
 	"Answer in superclass order (any superclass precedes any subclass)
 	 the ancilliaryClasses that are struct classes for all the given classes."
 	| theStructClasses |
@@ -5321,19 +5306,19 @@ RustCCodeGenerator >> structClassesForTranslationClasses: classes [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> structTargetKindForDeclaration: typeName [ "<String>"
+RustCodeGenerator >> structTargetKindForDeclaration: typeName [ "<String>"
 	^VMStructType structTargetKindForDeclaration: typeName
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> structTargetKindForVariableName: varName [ "<String>"
+RustCodeGenerator >> structTargetKindForVariableName: varName [ "<String>"
 	^(self typeOfVariable: varName) ifNotNil:
 		[:declaration|
 		 self structTargetKindForDeclaration: declaration]
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> superclassOrder: classes [
+RustCodeGenerator >> superclassOrder: classes [
 	^[ChangeSet superclassOrder: classes] "Squeak"
 		on: MessageNotUnderstood
 		do: [ :ex|
@@ -5343,17 +5328,17 @@ RustCCodeGenerator >> superclassOrder: classes [
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> suppressAsmLabels [
+RustCodeGenerator >> suppressAsmLabels [
 	^suppressAsmLabels
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> suppressAsmLabels: aBoolean [
+RustCodeGenerator >> suppressAsmLabels: aBoolean [
 	suppressAsmLabels := aBoolean
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> suppressAsmLabelsWhile: aBlock [
+RustCodeGenerator >> suppressAsmLabelsWhile: aBlock [
 	| oldSuppressAsmLabels |
 	oldSuppressAsmLabels := suppressAsmLabels.
 	suppressAsmLabels := true.
@@ -5361,7 +5346,7 @@ RustCCodeGenerator >> suppressAsmLabelsWhile: aBlock [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> testInliningFor: selector as: inlineFlagOrSymbol [
+RustCodeGenerator >> testInliningFor: selector as: inlineFlagOrSymbol [
 	"Test inlining for the method with the given selector.
 	 Do all inlining first (cuz that's how the algorithm works).
 	 Then try and inline into a copy of the method.  This isn't
@@ -5377,13 +5362,13 @@ RustCCodeGenerator >> testInliningFor: selector as: inlineFlagOrSymbol [
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> translationMethodClass [
+RustCodeGenerator >> translationMethodClass [
 	"return the class used to produce C translation methods from MethodNodes"
 	^RustTMethod
 ]
 
 { #category : #'C translation support' }
-RustCCodeGenerator >> tryToCollapseBothArmsOfConditional: msgNode on: aStream indent: level [
+RustCodeGenerator >> tryToCollapseBothArmsOfConditional: msgNode on: aStream indent: level [
 	"Attempt to generate the code for an ifTrue:ifFalse: if both arms are found to be the same, in which case
 	 answer true.  Otherwise output nothing and answer false."
 	(msgNode args first isSameAs: msgNode args second) ifFalse:
@@ -5396,7 +5381,7 @@ RustCCodeGenerator >> tryToCollapseBothArmsOfConditional: msgNode on: aStream in
 ]
 
 { #category : #'C translation support' }
-RustCCodeGenerator >> tryToCollapseBothArmsOfConditionalExpression: msgNode on: aStream indent: level [
+RustCodeGenerator >> tryToCollapseBothArmsOfConditionalExpression: msgNode on: aStream indent: level [
 	"Attempt to generate the code for an ifTrue:ifFalse: if both arms are found to be the same, in which case
 	 answer true.  Otherwise output nothing and answer false."
 	(msgNode args first isSameAs: msgNode args second) ifFalse:
@@ -5411,12 +5396,12 @@ RustCCodeGenerator >> tryToCollapseBothArmsOfConditionalExpression: msgNode on: 
 ]
 
 { #category : #'type inference' }
-RustCCodeGenerator >> typeFor: aNode in: aTMethod [
+RustCodeGenerator >> typeFor: aNode in: aTMethod [
 	^aNode typeFrom: self in: aTMethod
 ]
 
 { #category : #'type inference' }
-RustCCodeGenerator >> typeForArithmetic: sendNode in: aTMethod [
+RustCodeGenerator >> typeForArithmetic: sendNode in: aTMethod [
 	"Answer the return type for an arithmetic sendThis is so that the inliner can still
 	 inline simple expressions.  Deal with pointer arithmetic, floating point arithmetic
 	 and promotion."
@@ -5444,7 +5429,7 @@ RustCCodeGenerator >> typeForArithmetic: sendNode in: aTMethod [
 ]
 
 { #category : #'type inference' }
-RustCCodeGenerator >> typeForConditional: sendNode in: aTMethod [
+RustCodeGenerator >> typeForConditional: sendNode in: aTMethod [
 	"Answer the return type for a conditional, ifTrue:ifFalse: et al"
 	| firstType secondType |
 	firstType := self typeFor: sendNode args first statements last in: aTMethod.
@@ -5458,7 +5443,7 @@ RustCCodeGenerator >> typeForConditional: sendNode in: aTMethod [
 ]
 
 { #category : #'type inference' }
-RustCCodeGenerator >> typeForDereference: sendNode in: aTMethod [
+RustCodeGenerator >> typeForDereference: sendNode in: aTMethod [
 	(self typeFor: sendNode receiver in: aTMethod) ifNotNil:
 		[:type|
 		 type last = $* ifTrue:
@@ -5473,7 +5458,7 @@ RustCCodeGenerator >> typeForDereference: sendNode in: aTMethod [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> typeOfVariable: varName [ "<String>"
+RustCodeGenerator >> typeOfVariable: varName [ "<String>"
 	self assert: varName isString.
 	scopeStack reverseDo:
 		[:dict|
@@ -5498,7 +5483,7 @@ RustCCodeGenerator >> typeOfVariable: varName [ "<String>"
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> unreachableMethods [
+RustCodeGenerator >> unreachableMethods [
 	"Return a collection of methods that are never invoked."
 
 	| neededSelectors previousSize visited |
@@ -5529,7 +5514,7 @@ RustCCodeGenerator >> unreachableMethods [
 ]
 
 { #category : #'type inference' }
-RustCCodeGenerator >> unsignedTypeForIntegralType: aCTypeString [
+RustCodeGenerator >> unsignedTypeForIntegralType: aCTypeString [
 	^aCTypeString first = $u
 		ifTrue: [aCTypeString]
 		ifFalse:
@@ -5539,19 +5524,19 @@ RustCCodeGenerator >> unsignedTypeForIntegralType: aCTypeString [
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> useSymbolicConstants [
+RustCodeGenerator >> useSymbolicConstants [
 	"Answer whether we should generate symbolic constants instead of their actual values"
 	^useSymbolicConstants
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> useSymbolicConstants: aBool [
+RustCodeGenerator >> useSymbolicConstants: aBool [
 	"Indicate whether we should generate symbolic constants instead of their actual values"
 	useSymbolicConstants := aBool
 ]
 
 { #category : #public }
-RustCCodeGenerator >> var: varName declareC: declarationString [
+RustCodeGenerator >> var: varName declareC: declarationString [
 	"Record the given C declaration for a global variable."
 
 	(declarationString includesSubstring: varName) ifFalse:
@@ -5560,14 +5545,14 @@ RustCCodeGenerator >> var: varName declareC: declarationString [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> var: varName type: type [
+RustCodeGenerator >> var: varName type: type [
 	"Use this in preference to #var:declareC: when ever possible since it avoids typing
 	 the varname twice and thus avoids the potential for a typo. See also #var:type:array:"
 	self var: varName declareC: type , ' ' , varName
 ]
 
 { #category : #public }
-RustCCodeGenerator >> var: varName type: cType array: array [
+RustCodeGenerator >> var: varName type: cType array: array [
 	"Use this in preference to #var:declareC: when possible. This produces a C
 	 statment of the form
 		int * fooArray[]={1,2,3}
@@ -5578,7 +5563,7 @@ RustCCodeGenerator >> var: varName type: cType array: array [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> var: varName type: cType sizeString: sizeString array: array [
+RustCodeGenerator >> var: varName type: cType sizeString: sizeString array: array [
 	"Use this in preference to #var:declareC: when possible. This produces a C
 	 statment of the form
 		int * fooArray[3 /* Foo */]={1,2,3}
@@ -5589,7 +5574,7 @@ RustCCodeGenerator >> var: varName type: cType sizeString: sizeString array: arr
 ]
 
 { #category : #inlining }
-RustCCodeGenerator >> variableOfType: variableType acceptsValue: exprNode ofType: expressionType [
+RustCodeGenerator >> variableOfType: variableType acceptsValue: exprNode ofType: expressionType [
 	"Simple type checking for assignment/return values"
 
 	^variableType isNil "means as yet untyped, hence can adapt"
@@ -5612,13 +5597,13 @@ RustCCodeGenerator >> variableOfType: variableType acceptsValue: exprNode ofType
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> vmClass [
+RustCodeGenerator >> vmClass [
 	"Answer the interpreter class if any.  This is nil other than for the core VM."
 	^vmClass
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> vmClass: aClass [
+RustCodeGenerator >> vmClass: aClass [
 	"Set the main translation class if any.  This is nil other than for the core VM.
 	 It may be an interpreter or a cogit"
 	vmClass := aClass.
@@ -5627,7 +5612,7 @@ RustCCodeGenerator >> vmClass: aClass [
 ]
 
 { #category : #public }
-RustCCodeGenerator >> vmHeaderContentsWithBytesPerWord: bytesPerWord [
+RustCodeGenerator >> vmHeaderContentsWithBytesPerWord: bytesPerWord [
 	"Store C header code on the given stream."
 
 	^ ByteString
@@ -5635,17 +5620,17 @@ RustCCodeGenerator >> vmHeaderContentsWithBytesPerWord: bytesPerWord [
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> vmMaker [
+RustCodeGenerator >> vmMaker [
 	^vmMaker
 ]
 
 { #category : #accessing }
-RustCCodeGenerator >> vmMaker: aVMMaker [
+RustCodeGenerator >> vmMaker: aVMMaker [
 	vmMaker := aVMMaker
 ]
 
 { #category : #utilities }
-RustCCodeGenerator >> with: aNode ifAppropriateSetTo: aBoolean do: aBlock [
+RustCodeGenerator >> with: aNode ifAppropriateSetTo: aBoolean do: aBlock [
 	"If aNode is a TDefineNode for a variable, set it to the supplied boolean for the duration
 	 of aBlock.  This avoids duplicating both arms of nested cppIf:ifTrue:[ifFalse:]'s."
 	| savedOptions |
@@ -5660,7 +5645,7 @@ RustCCodeGenerator >> with: aNode ifAppropriateSetTo: aBoolean do: aBlock [
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> withConditionalDefineOf: aConstantNameString comment: commentOrNil on: aStream do: aBlock [
+RustCodeGenerator >> withConditionalDefineOf: aConstantNameString comment: commentOrNil on: aStream do: aBlock [
 	| start |
 	aStream nextPutAll: '#if !defined('; nextPutAll: aConstantNameString; nextPut: $).
 	commentOrNil ifNotNil: [aStream nextPutAll: ' /* '; nextPutAll: commentOrNil; nextPutAll: ' */'].
@@ -5674,7 +5659,7 @@ RustCCodeGenerator >> withConditionalDefineOf: aConstantNameString comment: comm
 ]
 
 { #category : #'C code generator' }
-RustCCodeGenerator >> withOptionalConditionalDefineFor: aTMethod on: aStream do: aBlock [
+RustCodeGenerator >> withOptionalConditionalDefineFor: aTMethod on: aStream do: aBlock [
 	"Evaluate aBlock, surrounded by an appropriate conditional define added to the stream if required."
 	| compileTimeOptionPragmas |
 	(compileTimeOptionPragmas := aTMethod compileTimeOptionPragmas) notEmpty ifTrue:

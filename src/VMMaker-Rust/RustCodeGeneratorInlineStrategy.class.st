@@ -1,5 +1,5 @@
 Class {
-	#name : #RustCCodeGeneratorInlineStrategy,
+	#name : #RustCodeGeneratorInlineStrategy,
 	#superclass : #Object,
 	#instVars : [
 		'codeGenerator'
@@ -8,25 +8,25 @@ Class {
 }
 
 { #category : #'instance-cre' }
-RustCCodeGeneratorInlineStrategy class >> always [
+RustCodeGeneratorInlineStrategy class >> always [
 	
-	^ RustCCodeGeneratorInlineAlwaysStrategy new
+	^ RustCodeGeneratorInlineAlwaysStrategy new
 ]
 
 { #category : #converting }
-RustCCodeGeneratorInlineStrategy class >> asSpecified [
+RustCodeGeneratorInlineStrategy class >> asSpecified [
 
-	^ RustCCodeGeneratorInlineAsSpecifiedStrategy new
+	^ RustCodeGeneratorInlineAsSpecifiedStrategy new
 ]
 
 { #category : #converting }
-RustCCodeGeneratorInlineStrategy class >> asSpecifiedOrQuick [
+RustCodeGeneratorInlineStrategy class >> asSpecifiedOrQuick [
 
-	^ RustCCodeGeneratorInlineAsSpecifiedOrQuickStrategy new
+	^ RustCodeGeneratorInlineAsSpecifiedOrQuickStrategy new
 ]
 
 { #category : #'instance creation' }
-RustCCodeGeneratorInlineStrategy class >> from: anObject [
+RustCodeGeneratorInlineStrategy class >> from: anObject [
 	
 	"The argument is either a boolean or a sumbol.
 	If a boolean, it indicates if we need to inline or not.
@@ -44,49 +44,49 @@ RustCCodeGeneratorInlineStrategy class >> from: anObject [
 ]
 
 { #category : #'instance-crea' }
-RustCCodeGeneratorInlineStrategy class >> never [
+RustCodeGeneratorInlineStrategy class >> never [
 
-	^ RustCCodeGeneratorInlineNeverStrategy new
+	^ RustCodeGeneratorInlineNeverStrategy new
 ]
 
 { #category : #testing }
-RustCCodeGeneratorInlineStrategy >> canInline: aTMethod [
+RustCodeGeneratorInlineStrategy >> canInline: aTMethod [
 	
 	^ (self hasUnrenamableCCode: aTMethod) not
 		and: [ aTMethod extractInlineDirective ~= false ]
 ]
 
 { #category : #accessing }
-RustCCodeGeneratorInlineStrategy >> codeGenerator [
+RustCodeGeneratorInlineStrategy >> codeGenerator [
 	^ codeGenerator
 ]
 
 { #category : #accessing }
-RustCCodeGeneratorInlineStrategy >> codeGenerator: anObject [
+RustCodeGeneratorInlineStrategy >> codeGenerator: anObject [
 	codeGenerator := anObject
 ]
 
 { #category : #testing }
-RustCCodeGeneratorInlineStrategy >> hasUnrenamableCCode: aTMethod [
+RustCodeGeneratorInlineStrategy >> hasUnrenamableCCode: aTMethod [
 
 	^ (codeGenerator isSpecialSelector: aTMethod selector)
 		or: [ aTMethod hasUnrenamableCCode ]
 ]
 
 { #category : #testing }
-RustCCodeGeneratorInlineStrategy >> isSelectiveInlineStrategy [
+RustCodeGeneratorInlineStrategy >> isSelectiveInlineStrategy [
 	
 	^ false
 ]
 
 { #category : #asserting }
-RustCCodeGeneratorInlineStrategy >> shouldInlineMethod: aMethod [
+RustCodeGeneratorInlineStrategy >> shouldInlineMethod: aMethod [
 
 	^ self canInline: aMethod
 ]
 
 { #category : #asserting }
-RustCCodeGeneratorInlineStrategy >> validateCanInline: aMethod [
+RustCodeGeneratorInlineStrategy >> validateCanInline: aMethod [
 
 	((self canInline: aMethod) not
 		and: [ self wantsInline: aMethod ]) ifTrue: [
@@ -95,7 +95,7 @@ RustCCodeGeneratorInlineStrategy >> validateCanInline: aMethod [
 ]
 
 { #category : #testing }
-RustCCodeGeneratorInlineStrategy >> wantsInline: aTMethod [ 
+RustCodeGeneratorInlineStrategy >> wantsInline: aTMethod [ 
 	
 	^ (codeGenerator isSpecialSelector: aTMethod selector) not
 		and: [ aTMethod extractInlineDirective == true ]

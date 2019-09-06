@@ -493,28 +493,34 @@ RustTMethod >> elideAnyFinalReturn [
 ]
 
 { #category : #'C code generation' }
-RustTMethod >> emitCCodeOn: aStream generator: aCodeGen [
-	"Emit C code for this method onto the given stream.
+RustTMethod >> emitCCodeOn: aStream generator: aCodeGenerator [
+	"Emit Rust code for this method onto the given stream.
 	 All calls to inlined methods should already have been expanded."
 	| bodyStream conditional |
 
-	aCodeGen currentMethod: self.
+	aCodeGenerator currentMethod: self.
 	usedVariablesCache := Set new.
-	self emitCCommentOn: aStream.	"place method comment and method name before function."
-	aStream crtab; nextPutAll: '/* '; nextPutAll: self definingClass name; nextPutAll: '>>#'; nextPutAll: self smalltalkSelector; nextPutAll: ' */'.	
-	aStream cr. 
-	conditional := self emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: false.
-	aStream cr; nextPut: ${.
+	
+	"place method comment and method name before function."
+	self emitCCommentOn: aStream.	
+	aStream nextPutAll: '/* '; nextPutAll: self definingClass name; nextPutAll: '>>#'; nextPutAll: self smalltalkSelector; nextPutAll: ' */'.	
+	aStream cr.
+
+	conditional := self emitCFunctionPrototype: aStream generator: aCodeGenerator isPrototype: false.
+	aStream space; nextPut: ${.
+	
 	bodyStream := ReadWriteStream on: (ByteString new: 128).
-	aCodeGen "Generation will note used variables in usedVariablesCache"
+	aCodeGenerator "Generation will note used variables in usedVariablesCache"
 		pushScope: declarations
-		while: [parseTree emitCCodeOn: bodyStream level: 1 generator: aCodeGen].
-	self emitCLocalsOn: aStream generator: aCodeGen.
+		while: [parseTree emitCCodeOn: bodyStream level: 1 generator: aCodeGenerator].
+	self emitCLocalsOn: aStream generator: aCodeGenerator.
 	usedVariablesCache := nil.
 	aStream nextPutAll: bodyStream contents.
+
 	(returnType = #void or: [parseTree endsWithReturn]) ifFalse:
 		[aStream tab; nextPutAll: 'return 0;'; cr].
 	aStream nextPut: $}; cr.
+
 	conditional ifTrue:
 		[self terminateConditionalDefineFor: self compileTimeOptionPragmas on: aStream]
 ]
@@ -554,40 +560,56 @@ RustTMethod >> emitCFunctionPrototype: aStream generator: aCodeGen [
 ]
 
 { #category : #'C code generation' }
-RustTMethod >> emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: isPrototype [ "<Boolean>"
+RustTMethod >> emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: isPrototype [
 	"Emit a C function header for this method onto the given stream.
 	 Answer if the method has any compileTimeOptionPragmas"
 	| compileTimeOptionPragmas returnTypeIsFunctionPointer |
-	(compileTimeOptionPragmas := self compileTimeOptionPragmas) notEmpty ifTrue:
-		[self outputConditionalDefineFor: compileTimeOptionPragmas on: aStream].
-	returnTypeIsFunctionPointer := returnType notNil
-									and: [returnType last = $)
-									and: [returnType includesSubstring: (aCodeGen cFunctionNameFor: selector)]].
+	<return: #Boolean>
+	
+	(compileTimeOptionPragmas := self compileTimeOptionPragmas)
+		ifNotEmpty: [ self outputConditionalDefineFor: compileTimeOptionPragmas on: aStream ].
+	
+	returnTypeIsFunctionPointer := returnType isNotNil
+		and: [ returnType last = $)
+			and: [ returnType includesSubstring: (aCodeGen cFunctionNameFor: selector) ] ].
+
 	export 
-		ifTrue:
-			[aStream nextPutAll: 'EXPORT('; nextPutAll: returnType; nextPut: $)]
-		ifFalse:
-			[self isStatic
-				ifTrue: [aStream nextPutAll: 'static ']
-				ifFalse:
-					[isPrototype ifTrue:
-						[aStream nextPutAll: 'extern ']].
-			 (isPrototype or: [inline ~~ #always]) ifFalse: [aStream nextPutAll: 'inline '].
-			 aStream nextPutAll: (returnType ifNil: [#sqInt])].
+		ifTrue: [ aStream nextPutAll: 'EXPORT('; nextPutAll: returnType; nextPut: $) ]
+		ifFalse: [
+			self isStatic
+				ifTrue: [aStream nextPutAll: 'pub ']
+				ifFalse: [ isPrototype ifTrue: [ aStream nextPutAll: 'extern ' ] ].
+
+			isPrototype ifFalse: [
+				inline = #always
+					ifTrue: [ aStream nextPutAll: '#[inline(always)]'; cr ].
+				inline = #never
+					ifTrue: [ aStream nextPutAll: '#[inline(never)]'; cr ] ] ].
+		
+	
+	aStream
+		nextPutAll: 'fn ';
+		nextPutAll: (aCodeGen cFunctionNameFor: selector);
+		nextPut: $(.
+	
+	args isEmpty
+		ifFalse: [
+			args
+				do: [ :eachArgument | aStream nextPutAll: (self declarationAt: eachArgument) ]
+				separatedBy: [ aStream nextPutAll: ', '] ].
+
+	aStream nextPut: $).
+	
+	aStream
+		nextPutAll: ' -> ';
+		nextPutAll: (returnType ifNil: [#sqInt]).
+	
+
 	(functionAttributes isNil or: [returnTypeIsFunctionPointer]) ifFalse:
 		[aStream space; nextPutAll: functionAttributes].
-	isPrototype ifTrue: [aStream space] ifFalse: [aStream cr].
-	returnTypeIsFunctionPointer ifFalse:
-		[aStream
-			nextPutAll: (aCodeGen cFunctionNameFor: selector);
-			nextPut: $(.
-		args isEmpty
-			ifTrue: [aStream nextPutAll: #void]
-			ifFalse:
-				[args
-					do: [:arg| aStream nextPutAll: (self declarationAt: arg)]
-					separatedBy: [aStream nextPutAll: ', ']].
-		aStream nextPut: $)].
+	isPrototype ifTrue: [aStream space] ifFalse: [].
+	returnTypeIsFunctionPointer ifFalse: [ ].
+
 	isPrototype ifTrue:
 		[aStream nextPut: $;; cr.
 		 compileTimeOptionPragmas isEmpty ifFalse:

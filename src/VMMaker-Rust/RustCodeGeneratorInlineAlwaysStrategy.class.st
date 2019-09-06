@@ -1,17 +1,17 @@
 Class {
-	#name : #RustCCodeGeneratorInlineAlwaysStrategy,
-	#superclass : #RustCCodeGeneratorAbsoluteInlineStrategy,
+	#name : #RustCodeGeneratorInlineAlwaysStrategy,
+	#superclass : #RustCodeGeneratorAbsoluteInlineStrategy,
 	#category : #'VMMaker-Rust'
 }
 
 { #category : #accessing }
-RustCCodeGeneratorInlineAlwaysStrategy >> inlineFlagOrSymbol [
+RustCodeGeneratorInlineAlwaysStrategy >> inlineFlagOrSymbol [
 
 	^ true
 ]
 
 { #category : #accessing }
-RustCCodeGeneratorInlineAlwaysStrategy >> nodeCountOfMethod: aTMethod [
+RustCodeGeneratorInlineAlwaysStrategy >> nodeCountOfMethod: aTMethod [
 
 	| nodeCount |
 	nodeCount := 0.
@@ -20,7 +20,7 @@ RustCCodeGeneratorInlineAlwaysStrategy >> nodeCountOfMethod: aTMethod [
 ]
 
 { #category : #asserting }
-RustCCodeGeneratorInlineAlwaysStrategy >> shouldInlineMethod: aTMethod [ 
+RustCodeGeneratorInlineAlwaysStrategy >> shouldInlineMethod: aTMethod [ 
 
 	^ (super shouldInlineMethod: aTMethod) and: [
 			(self wantsInline: aTMethod)
