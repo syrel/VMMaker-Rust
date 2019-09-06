@@ -663,8 +663,9 @@ RustCodeGenerator >> cFunctionNameFor: aSelector [
 	"Create a Rust function name from the given selector by finding
 	 a specific translation, or if none, simply omitting colons, and
 	 any trailing underscores (this supports a varargs convention)."
-
-	^ selectorTranslations
+	| aFunctionName aSnakeCase |
+	<return: #String>
+	aFunctionName := selectorTranslations
 		at: aSelector
 		ifAbsent:
 			[| cSelector |
@@ -672,7 +673,13 @@ RustCodeGenerator >> cFunctionNameFor: aSelector [
 			 aSelector last = $: ifTrue:
 				[[cSelector last = $_] whileTrue:
 					[cSelector := cSelector allButLast]].
-			 cSelector]
+			 cSelector].
+		
+	aSnakeCase := aFunctionName
+		copyWithRegex: '([a-z])([A-Z]+)'
+		matchesTranslatedUsing: [ :each | each first asString, '_', each allButFirst uncapitalized ].
+		
+	^ aSnakeCase
 ]
 
 { #category : #'C code generator' }
@@ -693,7 +700,7 @@ RustCodeGenerator >> cLiteralFor: anObject [
 			[anObject isSymbol ifTrue:
 				[^self cFunctionNameFor: anObject].
 			anObject isString ifTrue:
-				[^'"', (anObject copyReplaceAll: (String with: Character cr) with: '\n') , '"'].
+				[^'"', (anObject copyReplaceAll: (String with: Character cr) with: '\n') , '".to_string()'].
 			anObject == nil ifTrue: [^ 'null' ].
 			anObject == true ifTrue: [^ 'true' ].
 			anObject == false ifTrue: [^ 'false' ].
@@ -3319,28 +3326,8 @@ RustCodeGenerator >> globalsAsSet [
 RustCodeGenerator >> harmonizeReturnTypesIn: aSetOfTypes [
 	"Eliminate signed/unsigned conflicts in aSetOfTypes. Non-negative integers can be either
 	 signed or unsigned. Ignore them unless there are no types, in which case default to sqInt."
-	| constantIntegers sqs usqs |
 	
-	
-	self halt.
-	
-	constantIntegers := aSetOfTypes select: [:element| element isInteger].
-	aSetOfTypes removeAll: constantIntegers.
-	"N.B. Because of LP64 vs LLP64 issues do *not* rename #long to #sqInt or #'unsigned long' to #usqInt"
-	#(char short int #'long long' #'unsigned char' #'unsigned short' #'unsigned int' #'unsigned long long')
-		with: #(sqInt sqInt sqInt sqLong usqInt usqInt usqInt usqLong)
-		do: [:type :replacement|
-			(aSetOfTypes includes: type) ifTrue:
-				[aSetOfTypes remove: type; add: replacement]].
-	sqs := aSetOfTypes select: [:t| t beginsWith: 'sq'].
-	usqs := aSetOfTypes select: [:t| t beginsWith: 'usq'].
-	^(sqs size + usqs size = aSetOfTypes size
-	   and: [sqs notEmpty
-	   and: [sqs allSatisfy: [:t| usqs includes: 'u', t]]])
-		ifTrue: [sqs]
-		ifFalse: [(aSetOfTypes isEmpty and: [constantIntegers notEmpty])
-					ifTrue: [Set with: #sqInt]
-					ifFalse: [aSetOfTypes]]
+	^ aSetOfTypes
 ]
 
 { #category : #public }
@@ -3366,8 +3353,6 @@ RustCodeGenerator >> implicitReturnTypeFor: aSelector [
 	 defining class doesn't understand implicitReturnTypeFor:."
 	| m |
 	
-	self halt.
-	
 	m := methods at: aSelector ifAbsent: [^#sqInt].
 	^[m definingClass implicitReturnTypeFor: aSelector]
 		on: MessageNotUnderstood
@@ -3392,9 +3377,6 @@ RustCodeGenerator >> inferTypesForImplicitlyTypedVariablesAndMethods [
 
 	"Iterate over all methods, inferring #void return types, until we reach a fixed point."
 	| allMethods |
-	
-	
-	self halt.
 	
 	allMethods := apiMethods
 					ifNil: [methods]
@@ -3916,10 +3898,7 @@ RustCodeGenerator >> isSimpleType: aType [
 	"For the purposes of the read-before-written initializer, answer if
 	 aType is simple, e.g. not a structure, and array or an opaque type."
 	
-	self halt.
-	
-	^(self isPointerCType: aType)
-	  or: [self isIntegralCType: aType]
+	^ aType isSimple
 ]
 
 { #category : #inlining }
@@ -4657,8 +4636,6 @@ RustCodeGenerator >> promoteArithmeticTypes: firstType and: secondType [
 	 It is important to choose deterministically to get stable source generation.
 	 Also, the behaviour of inlined and non inlined code should be unchanged."
 	
-	self halt.
-	
 	((#(#double float) includes: firstType)
 	 or: [#(#double float) includes: secondType]) ifTrue:
 		[^(firstType = #double or: [secondType = #double])
@@ -4705,9 +4682,6 @@ RustCodeGenerator >> promoteIntegerArithmeticTypes: firstType and: secondType [
 
 	This is so that the generated code behaviour is insensitive to inlining."
 	| length1 length2 intSize |
-	
-	
-	self halt.
 	
 	length1 := self sizeOfIntegralCType: firstType.
 	length2 := self sizeOfIntegralCType: secondType.
@@ -4991,8 +4965,6 @@ RustCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
 	 be defaulted, since on a subsequent pass its type may be computable."
 	| sel methodOrNil |
 	
-	self halt.
-	
 	methodOrNil := self anyMethodNamed: (sel := sendNode selector).
 	(methodOrNil notNil and: [methodOrNil returnType notNil]) ifTrue:
 		[^self baseTypeForType: methodOrNil returnType].
@@ -5042,11 +5014,11 @@ RustCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
 				[#anyMask:]				->	[#int].
 				[#allMask:]				->	[#int].
 				[#noMask:]				->	[#int].
-				[#isNil]					->	[#int].
-				[#notNil]				->	[#int].
+				[#isNil]					->	[ RustBoolean new ].
+				[#notNil]				->	[ RustBoolean new ].
 				[#&]					->	[#int].
 				[#|]						->	[#int].
-				[#not]					->	[#int].
+				[#not]					->	[ RustBoolean new ].
 				[#asFloat]				->	[#double].
 				[#atan]					->	[#double].
 				[#exp]					->	[#double].
@@ -5070,8 +5042,8 @@ RustCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
 				[#ifFalse:ifTrue:]		->	[self typeForConditional: sendNode in: aTMethod].
 				[#ifTrue:]				->	[self typeForConditional: sendNode in: aTMethod].
 				[#ifFalse:]				->	[self typeForConditional: sendNode in: aTMethod].
-				[#and:]					->	[#sqInt].
-				[#or:]					->	[#sqInt].
+				[#and:]					->	[ RustBoolean new ].
+				[#or:]					->	[ RustBoolean new ].
 				[#caseOf:]				->	[self typeFor: sendNode args first in: aTMethod] }
 				otherwise: "If there /is/ a method for sel but its return type is as yet unknown it /mustn't/ be defaulted,
 							since on a subsequent pass its type may be computable.  Only default unbound selectors."
@@ -5174,6 +5146,9 @@ RustCodeGenerator >> signedTypeForIntegralType: aCTypeString [
 RustCodeGenerator >> sizeOfIntegralCType: anIntegralCType [ "<String>"
 	"N.B. Only works for values for which isIntegralCType: answers true."
 	| prunedCType index |
+	
+	true ifTrue: [ ^ anIntegralCType sizeOf ].
+	
 	(anIntegralCType beginsWith: 'register ') ifTrue:
 		[^self sizeOfIntegralCType: (anIntegralCType allButFirst: 9)].
 	prunedCType := (anIntegralCType beginsWith: 'unsigned ')
@@ -5458,21 +5433,23 @@ RustCodeGenerator >> typeForArithmetic: sendNode in: aTMethod [
 	 and promotion."
 	| rcvrType argType arg |
 
-	self halt.
-
 	rcvrType := sendNode receiver typeOrNilFrom: self in: aTMethod.
 	argType := (arg := sendNode args first) typeOrNilFrom: self in: aTMethod.
+
 	"deal with pointer arithmetic"
-	((rcvrType notNil and: [rcvrType last == $*]) or: [argType notNil and: [argType last == $*]]) ifTrue:
+	((rcvrType notNil and: [ rcvrType isPointer ]) or: [argType notNil and: [argType isPointer]]) ifTrue:
 		[(rcvrType isNil or: [argType isNil]) ifTrue:
 			[^nil].
-		 (rcvrType last == $* and: [argType last == $*]) ifTrue:
+		 (rcvrType isPointer and: [argType isPointer]) ifTrue:
 			[sendNode selector == #- ifTrue:
 				[^#int].
 			 self error: 'invalid pointer arithmetic'].
-		 ^rcvrType last == $*
+		 ^rcvrType isPointer
 			ifTrue: [rcvrType]
 			ifFalse: [argType]].
+	
+	true ifTrue: [ ^ rcvrType perform: sendNode selector with: argType ].
+	
 	^(self promoteArithmeticTypes: rcvrType and: argType) ifNotNil:
 		[:promotedType|
 		 "We have to be very careful with subtraction.  The difference between two unsigned types is signed.

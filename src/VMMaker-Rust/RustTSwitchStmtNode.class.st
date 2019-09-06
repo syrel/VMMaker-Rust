@@ -7,7 +7,7 @@ Class {
 		'otherwiseOrNil',
 		'switchVariable'
 	],
-	#category : #'VMMaker-Rust'
+	#category : #'VMMaker-Rust-Nodes'
 }
 
 { #category : #transformations }

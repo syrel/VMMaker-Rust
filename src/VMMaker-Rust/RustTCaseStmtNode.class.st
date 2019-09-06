@@ -7,7 +7,7 @@ Class {
 		'lasts',
 		'cases'
 	],
-	#category : #'VMMaker-Rust'
+	#category : #'VMMaker-Rust-Nodes'
 }
 
 { #category : #transformations }

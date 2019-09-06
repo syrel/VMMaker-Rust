@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'method'
 	],
-	#category : #'VMMaker-Rust'
+	#category : #'VMMaker-Rust-Nodes'
 }
 
 { #category : #transformations }

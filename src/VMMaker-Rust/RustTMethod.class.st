@@ -519,7 +519,7 @@ RustTMethod >> emitCCodeOn: aStream generator: aCodeGenerator [
 
 	(returnType = #void or: [parseTree endsWithReturn]) ifFalse:
 		[aStream tab; nextPutAll: 'return 0;'; cr].
-	aStream nextPut: $}; cr.
+	aStream nextPut: $}.
 
 	conditional ifTrue:
 		[self terminateConditionalDefineFor: self compileTimeOptionPragmas on: aStream]
@@ -569,9 +569,7 @@ RustTMethod >> emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: 
 	(compileTimeOptionPragmas := self compileTimeOptionPragmas)
 		ifNotEmpty: [ self outputConditionalDefineFor: compileTimeOptionPragmas on: aStream ].
 	
-	returnTypeIsFunctionPointer := returnType isNotNil
-		and: [ returnType last = $)
-			and: [ returnType includesSubstring: (aCodeGen cFunctionNameFor: selector) ] ].
+	returnTypeIsFunctionPointer := returnType isPointer.
 
 	export 
 		ifTrue: [ aStream nextPutAll: 'EXPORT('; nextPutAll: returnType; nextPut: $) ]
@@ -602,8 +600,7 @@ RustTMethod >> emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: 
 	
 	aStream
 		nextPutAll: ' -> ';
-		nextPutAll: (returnType ifNil: [#sqInt]).
-	
+		nextPutAll: returnType asRustTypeName.
 
 	(functionAttributes isNil or: [returnTypeIsFunctionPointer]) ifFalse:
 		[aStream space; nextPutAll: functionAttributes].
@@ -1158,8 +1155,6 @@ RustTMethod >> inferReturnTypeFromReturnsIn: aCodeGen [
 					self addTypesFor: n expression to: s in: aCodeGen.
 					{n. s}]]"
 	
-	self halt.
-	
 	aCodeGen maybeBreakForTestToInline: selector in: self.
 	returnType ifNotNil: [^self].
 	aCodeGen
@@ -1210,10 +1205,7 @@ RustTMethod >> inferReturnTypeFromReturnsIn: aCodeGen [
 { #category : #'type inference' }
 RustTMethod >> inferReturnTypeIn: aCodeGen [
 	"Attempt to infer the return type of the receiver and answer if it changed."
-
 	| existingReturnType |
-
-	self halt.
 
 	existingReturnType := returnType.
 	self inferReturnTypeFromReturnsIn: aCodeGen.
@@ -2362,8 +2354,6 @@ RustTMethod >> recordDeclarationsIn: aCCodeGen [
 
 	| newStatements |
 	
-	self halt.
-	
 	properties pragmas notEmpty ifTrue:
 		[properties pragmas do:
 			[:pragma|
@@ -2641,8 +2631,6 @@ RustTMethod >> returnType: aString [
 	"Set the type of the values returned by this method.
 	 This string will be used in the C declaration of this function.
 	 If the type exists as a symbol, use that."
-
-	self halt.
 
 	returnType := aString isSymbol
 					ifTrue: [aString]
@@ -3097,16 +3085,16 @@ RustTMethod >> typeFor: aVariable in: aCodeGen [
 	 by the type propagation logic in inlineSend:directReturn:exitVar:in:."
 	| varName |
 	varName := aVariable asString.
-	^(declarations
+	^ (declarations
 			at: varName
-			ifAbsent:
-				[(args includes: varName) "arg types default to sqInt"
+			ifAbsent: [
+				(args includes: varName) "arg types default to sqInt"
 					ifTrue: ['sqInt ', varName]
-					ifFalse:
-						[(locals includes: varName) ifFalse: "don't provide type for locals"
-							[aCodeGen typeOfVariable: varName]]]) ifNotNil:
-		[:decl|
-		aCodeGen extractTypeFor: varName fromDeclaration: decl]
+					ifFalse: [
+						(locals includes: varName)
+							ifFalse: [ aCodeGen typeOfVariable: varName ] ] ])
+		ifNotNil: [ :decl | aCodeGen extractTypeFor: varName fromDeclaration: decl ]
+		ifNil: [ RustUnknownType new ]
 ]
 
 { #category : #utilities }

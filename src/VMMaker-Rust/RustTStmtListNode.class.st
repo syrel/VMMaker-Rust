@@ -5,7 +5,7 @@ Class {
 		'arguments',
 		'statements'
 	],
-	#category : #'VMMaker-Rust'
+	#category : #'VMMaker-Rust-Nodes'
 }
 
 { #category : #adding }

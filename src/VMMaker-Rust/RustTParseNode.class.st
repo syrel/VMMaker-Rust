@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'comment'
 	],
-	#category : #'VMMaker-Rust'
+	#category : #'VMMaker-Rust-Nodes'
 }
 
 { #category : #utilities }
@@ -497,8 +497,9 @@ RustTParseNode >> typeFrom: aCodeGenerator in: aTMethod [
 
 { #category : #'type inference' }
 RustTParseNode >> typeOrNilFrom: aCodeGenerator in: aTMethod [
-	"When we don't know, it's nil"
-	^nil
+	<return: #RustTypedValue>
+
+	^ RustUnknownType new
 ]
 
 { #category : #accessing }

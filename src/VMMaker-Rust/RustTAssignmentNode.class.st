@@ -5,7 +5,7 @@ Class {
 		'variable',
 		'expression'
 	],
-	#category : #'VMMaker-Rust'
+	#category : #'VMMaker-Rust-Nodes'
 }
 
 { #category : #transformations }

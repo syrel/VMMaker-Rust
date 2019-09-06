@@ -1,7 +1,7 @@
 Class {
 	#name : #RustTPrintfFormatStringNode,
 	#superclass : #RustTConstantNode,
-	#category : #'VMMaker-Rust'
+	#category : #'VMMaker-Rust-Nodes'
 }
 
 { #category : #'C code generation' }

@@ -7,7 +7,7 @@ Class {
 		'arguments',
 		'isBuiltinOperator'
 	],
-	#category : #'VMMaker-Rust'
+	#category : #'VMMaker-Rust-Nodes'
 }
 
 { #category : #accessing }

@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'name'
 	],
-	#category : #'VMMaker-Rust'
+	#category : #'VMMaker-Rust-Nodes'
 }
 
 { #category : #transformations }
@@ -99,7 +99,7 @@ RustTVariableNode >> structTargetKindIn: aCodeGen [
 
 { #category : #'type inference' }
 RustTVariableNode >> typeOrNilFrom: aCodeGenerator in: aTMethod [
-	^aTMethod typeFor: self in: aCodeGenerator
+	^ aTMethod typeFor: self in: aCodeGenerator
 ]
 
 { #category : #accessing }
