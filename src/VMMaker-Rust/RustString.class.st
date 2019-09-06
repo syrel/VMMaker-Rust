@@ -5,6 +5,20 @@ Class {
 }
 
 { #category : #converting }
+RustString >> asRustBaseType [
+	<return: #RustTypedValue>
+	
+	^ self
+]
+
+{ #category : #converting }
+RustString >> asRustLiteral [
+	self assertHasValue.
+
+	^ '"', (self value copyReplaceAll: (String with: Character cr) with: '\n') , '".to_string()'
+]
+
+{ #category : #converting }
 RustString >> asRustTypeName [
 	^ 'String'
 ]

@@ -9,6 +9,16 @@ RustSlangCodeClass >> arithmetic_127_plus_1 [
 	^ 127 + 1
 ]
 
+{ #category : #comparison }
+RustSlangCodeClass >> integersLessThan [
+	^ 5 < 10
+]
+
+{ #category : #arrays }
+RustSlangCodeClass >> literalArrayOfIntegers [
+	^ #(0 1 2 3 4 5)
+]
+
 { #category : #abs }
 RustSlangCodeClass >> positiveSmallIntegerAbs [
 	^ 10 abs
@@ -57,6 +67,11 @@ RustSlangCodeClass >> returnZero [
 { #category : #return }
 RustSlangCodeClass >> returnZeroFloat [
 	^ 0.0
+]
+
+{ #category : #self }
+RustSlangCodeClass >> selfTrueOrFalse [
+	^ self trueOrFalse
 ]
 
 { #category : #abs }

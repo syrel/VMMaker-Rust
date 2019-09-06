@@ -14,3 +14,10 @@ RustInteger >> + anotherType [
 
 	^ { self . anotherType } detectMax: [ :eachType | eachType sizeOf ]
 ]
+
+{ #category : #converting }
+RustInteger >> asRustLiteral [
+	self assertHasValue.
+	
+	^ self value asString, self asRustTypeName
+]

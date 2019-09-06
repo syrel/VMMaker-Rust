@@ -12,9 +12,33 @@ RustCodeGeneratorExamples >> code_arithmetic_127_plus_1 [
 	aCode := self generator cCodeForMethod: #arithmetic_127_plus_1.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#arithmetic_127_plus_1 */
 pub fn arithmetic_127_plus_1() -> i16 {
-	return 0x7F + 1;
+	return 127i8 + 1i8;
 }'.
 
+	^ aCode
+]
+
+{ #category : #'examples - comparison' }
+RustCodeGeneratorExamples >> code_integersLessThan [
+	<gtExample>
+	| aCode |
+
+	aCode := self generator cCodeForMethod: #integersLessThan.
+	self assert: aCode equals: '/* RustSlangCodeClass>>#integersLessThan */
+pub fn integers_less_than() -> bool {
+	return 5i8 < 10i8;
+}'.
+
+	^ aCode
+]
+
+{ #category : #'examples - arrays' }
+RustCodeGeneratorExamples >> code_literalArrayOfIntegers [
+	<gtExample>
+	| aCode |
+	
+	aCode := self generator cCodeForMethod: #literalArrayOfIntegers.
+	
 	^ aCode
 ]
 
@@ -50,7 +74,7 @@ RustCodeGeneratorExamples >> code_returnNegativeOne [
 	aCode := self generator cCodeForMethod: #returnNegativeOne.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#returnNegativeOne */
 pub fn return_negative_one() -> i8 {
-	return -1;
+	return -1i8;
 }'.
 
 	^ aCode
@@ -104,6 +128,20 @@ RustCodeGeneratorExamples >> code_returnZeroFloat [
 	^ aCode
 ]
 
+{ #category : #'examples - self' }
+RustCodeGeneratorExamples >> code_selfTrueOrFalse [
+	<gtExample>
+	| aCode |
+	
+	aCode := self generator cCodeForMethod: #selfTrueOrFalse.
+	self assert: aCode equals: '/* RustSlangCodeClass>>#selfTrueOrFalse */
+pub fn self_true_or_false() -> bool {
+	return true_or_false();
+}'.
+
+	^ aCode
+]
+
 { #category : #'examples - abs' }
 RustCodeGeneratorExamples >> code_toDo [
 	<gtExample>
@@ -150,7 +188,7 @@ RustCodeGeneratorExamples >> code_zeroPlusZero [
 	aCode := self generator cCodeForMethod: #zeroPlusZero.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#zeroPlusZero */
 pub fn zero_plus_zero() -> i8 {
-	return 0;
+	return 0i8;
 }'.
 
 	^ aCode

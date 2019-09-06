@@ -24,6 +24,13 @@ RustTypedValue >> = anotherObject [
 ]
 
 { #category : #converting }
+RustTypedValue >> asRustBaseType [
+	<return: #RustTypedValue>
+
+	^ self subclassResponsibility
+]
+
+{ #category : #converting }
 RustTypedValue >> asRustLiteral [
 	"Return a string representing the Rust literal value for my value"
 	<return: #String>

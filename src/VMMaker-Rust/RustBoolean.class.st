@@ -4,7 +4,23 @@ Class {
 	#category : #'VMMaker-Rust-Types'
 }
 
-{ #category : #accessing }
+{ #category : #converting }
+RustBoolean >> asRustBaseType [
+	<return: #RustTypedValue>
+	
+	^ self
+]
+
+{ #category : #converting }
+RustBoolean >> asRustLiteral [
+	self assertHasValue.
+
+	^ self value
+		ifTrue: [ 'true' ]
+		ifFalse: [ 'false' ]
+]
+
+{ #category : #converting }
 RustBoolean >> asRustTypeName [
 	^ 'bool'
 ]

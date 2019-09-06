@@ -10,6 +10,13 @@ RustUnknownType >> + anotherType [
 ]
 
 { #category : #converting }
+RustUnknownType >> asRustBaseType [
+	<return: #RustTypedValue>
+	
+	^ self
+]
+
+{ #category : #converting }
 RustUnknownType >> asRustTypeName [
 	^ 'unknown'
 ]

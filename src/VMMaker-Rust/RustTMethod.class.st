@@ -84,21 +84,36 @@ RustTMethod >> addTypesFor: node to: typeSet in: aCodeGen [
 			ifNil: [^(aCodeGen methodNamed: expr selector) notNil and: [expr selector ~~ selector]]
 			ifNotNil:
 				[:type |
+				self assert: [ type isKindOf: RustTypedValue ].
 				typeSet add: type.
 				^false]].
 	expr isVariable ifTrue:
 		[(aCodeGen typeOfVariable: expr name)
-			ifNotNil: [:type| typeSet add: type]
-			ifNil: [(typeSet add: (expr name = 'self'
+			ifNotNil: [:type|
+				self assert: [ type isKindOf: RustTypedValue ].
+				typeSet add: type]
+			ifNil: [
+				| aType |
+				
+				aType := (expr name = 'self'
 										ifTrue: [#void]
-										ifFalse: [#sqInt])) == #sqInt ifTrue:
+										ifFalse: [#sqInt]).
+				self assert: [ aType isKindOf: RustTypedValue ].
+				(typeSet add: aType) == #sqInt ifTrue:
 					[^true]]].
 	expr isConstant ifTrue:
 		[(expr value isInteger and: [expr value >= 0]) "cannot determine if signed or unsigned yet..."
-			ifTrue: [typeSet add: expr value]
+			ifTrue: [
+				| aType |
+				
+				aType := expr value asRustType.
+				self assert: [ aType isKindOf: RustTypedValue ].
+				typeSet add: aType asRustType ]
 			ifFalse:
 				[(expr typeOrNilFrom: aCodeGen in: self) ifNotNil:
-					[:type | typeSet add: type]]].
+					[:type |
+					self assert: [ type isKindOf: RustTypedValue ].
+					typeSet add: type]]].
 	^false
 ]
 
@@ -2627,14 +2642,18 @@ RustTMethod >> returnType [
 ]
 
 { #category : #accessing }
-RustTMethod >> returnType: aString [
+RustTMethod >> returnType: aRustType [
 	"Set the type of the values returned by this method.
 	 This string will be used in the C declaration of this function.
 	 If the type exists as a symbol, use that."
 
-	returnType := aString isSymbol
-					ifTrue: [aString]
-					ifFalse: [(Symbol findInterned: aString) ifNil: [aString]]
+	self
+		assert: [ aRustType isKindOf: RustTypedValue ]
+		description: [ 'Must be a rust type' ].
+
+	returnType := aRustType isSymbol
+					ifTrue: [aRustType]
+					ifFalse: [(Symbol findInterned: aRustType) ifNil: [aRustType]]
 ]
 
 { #category : #testing }

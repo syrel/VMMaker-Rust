@@ -603,6 +603,9 @@ RustCodeGenerator >> baseTypeForPointerType: aCType [
 RustCodeGenerator >> baseTypeForType: aCType [
 	"Reduce various declarations to the most basic type we can determine."
 	| type fpIndex closeidx openidx |
+	
+	true ifTrue: [ ^ aCType asRustBaseType ].
+	
 	type := aCType.
 	((openidx := type indexOfSubCollection: 'const ') > 0
 	and: [openidx = 1 or: [(type at: openidx) isSeparator]]) ifTrue:
@@ -684,32 +687,9 @@ RustCodeGenerator >> cFunctionNameFor: aSelector [
 
 { #category : #'C code generator' }
 RustCodeGenerator >> cLiteralFor: anObject [
-	"Return a string representing the C literal value for the given object."
-	anObject isNumber
-		ifTrue:
-			[anObject isInteger ifTrue:
-				[| hex |
-				 hex := (anObject > 0
-								and: [(anObject >> anObject lowBit + 1) isPowerOfTwo
-								and: [(anObject highBit = anObject lowBit and: [anObject > 65536])
-									  or: [anObject highBit - anObject lowBit >= 4]]]).
-				^self cLiteralForInteger: anObject hex: hex].
-			anObject isFloat ifTrue:
-				[^anObject printString]]
-		ifFalse:
-			[anObject isSymbol ifTrue:
-				[^self cFunctionNameFor: anObject].
-			anObject isString ifTrue:
-				[^'"', (anObject copyReplaceAll: (String with: Character cr) with: '\n') , '".to_string()'].
-			anObject == nil ifTrue: [^ 'null' ].
-			anObject == true ifTrue: [^ 'true' ].
-			anObject == false ifTrue: [^ 'false' ].
-			anObject isCharacter ifTrue:
-				[^anObject == $'
-					ifTrue: ['''\'''''] "i.e. '\''"
-					ifFalse: [anObject asString printString]]].
-	self error: 'Warning: A Smalltalk literal could not be translated into a C constant: ', anObject printString.
-	^'"XXX UNTRANSLATABLE CONSTANT XXX"'
+	"Return a string representing the Rust literal value for the given object."
+	
+	^ anObject asRustType asRustLiteral
 ]
 
 { #category : #'C code generator' }
@@ -3349,17 +3329,17 @@ RustCodeGenerator >> ifStaticallyResolvedPolymorphicReceiverThenUpdateSelectorIn
 { #category : #'type inference' }
 RustCodeGenerator >> implicitReturnTypeFor: aSelector [
 	"Answer the default return type for mthods of the defining class of
-	 aSelector. Default to #sqInt if there is no method, or if the method's
+	 aSelector. Default to #RustUnknownType if there is no method, or if the method's
 	 defining class doesn't understand implicitReturnTypeFor:."
 	| m |
 	
-	m := methods at: aSelector ifAbsent: [^#sqInt].
+	m := methods at: aSelector ifAbsent: [^ RustUnknownType new ].
 	^[m definingClass implicitReturnTypeFor: aSelector]
 		on: MessageNotUnderstood
 		do: [:ex|
 			ex message selector ~~ #implicitReturnTypeFor: ifTrue:
 				[ex pass].
-			#sqInt]
+			RustUnknownType new ]
 ]
 
 { #category : #accessing }
@@ -3408,7 +3388,7 @@ RustCodeGenerator >> inferTypesForImplicitlyTypedVariablesAndMethods [
 		[:m|
 		m returnType ifNil:
 			[m returnType: (m returnsExpression
-								ifTrue: [#sqInt]
+								ifTrue: [ RustUnknownType new ]
 								ifFalse: [self implicitReturnTypeFor: m])].
 		m transformReturns].
 
@@ -5002,15 +4982,15 @@ RustCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
 				[#byteSwap64]			->	[#'unsigned long long'].
 				[#byteSwapped32IfBigEndian:]	->	[#'unsigned int'].
 				[#byteSwapped64IfBigEndian:]	->	[#'unsigned long long'].
-				[#=]					->	[#int].
-				[#~=]					->	[#int].
-				[#==]					->	[#int].
-				[#~~]					->	[#int].
-				[#<]					->	[#int].
-				[#<=]					->	[#int].
-				[#>]					->	[#int].
-				[#>=]					->	[#int].
-				[#between:and:]		->	[#int].
+				[#=]					->	[ RustBoolean new ].
+				[#~=]					->	[ RustBoolean new ].
+				[#==]					->	[ RustBoolean new ].
+				[#~~]					->	[ RustBoolean new ].
+				[#<]					->	[ RustBoolean new ].
+				[#<=]					->	[ RustBoolean new ].
+				[#>]					->	[ RustBoolean new ].
+				[#>=]					->	[ RustBoolean new ].
+				[#between:and:]		->	[ RustBoolean new ].
 				[#anyMask:]				->	[#int].
 				[#allMask:]				->	[#int].
 				[#noMask:]				->	[#int].
