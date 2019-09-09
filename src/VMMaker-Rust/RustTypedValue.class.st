@@ -2,7 +2,8 @@ Class {
 	#name : #RustTypedValue,
 	#superclass : #Object,
 	#instVars : [
-		'value'
+		'value',
+		'stack'
 	],
 	#category : #'VMMaker-Rust-Types'
 }
@@ -39,7 +40,7 @@ RustTypedValue >> asRustBaseType [
 RustTypedValue >> asRustLiteral [
 	"Return a string representing the Rust literal value for my value"
 	<return: #String>
-
+	
 	^ self subclassResponsibility
 ]
 
@@ -87,6 +88,13 @@ RustTypedValue >> hash [
 	^ self class hash bitXor: self value hash
 ]
 
+{ #category : #initialization }
+RustTypedValue >> initialize [
+	super initialize.
+
+	stack := thisContext sender sender copyStack
+]
+
 { #category : #testing }
 RustTypedValue >> isFloat [
 	^ false
@@ -122,6 +130,11 @@ RustTypedValue >> isSimple [
 
 { #category : #testing }
 RustTypedValue >> isUnknown [
+	^ false
+]
+
+{ #category : #testing }
+RustTypedValue >> isVoid [
 	^ false
 ]
 

@@ -11,7 +11,7 @@ RustCodeGeneratorExamples >> code_arithmetic_0_plus_0 [
 
 	aCode := self generator cCodeForMethod: #arithmetic_0_plus_0.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#arithmetic_0_plus_0 */
-pub fn arithmetic_0_plus_0() -> i8 {
+pub fn arithmetic_0_plus_0(&self) -> i8 {
 	return 0;
 }'.
 
@@ -25,7 +25,7 @@ RustCodeGeneratorExamples >> code_arithmetic_127_multiply_1 [
 
 	aCode := self generator cCodeForMethod: #arithmetic_127_multiply_1.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#arithmetic_127_multiply_1 */
-pub fn arithmetic_127_multiply_1() -> i8 {
+pub fn arithmetic_127_multiply_1(&self) -> i8 {
 	return 127;
 }'.
 
@@ -39,7 +39,7 @@ RustCodeGeneratorExamples >> code_arithmetic_127_multiply_127 [
 
 	aCode := self generator cCodeForMethod: #arithmetic_127_multiply_127.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#arithmetic_127_multiply_127 */
-pub fn arithmetic_127_multiply_127() -> i16 {
+pub fn arithmetic_127_multiply_127(&self) -> i16 {
 	return 127 * 127;
 }'.
 
@@ -53,7 +53,7 @@ RustCodeGeneratorExamples >> code_arithmetic_127_multiply_127f32 [
 
 	aCode := self generator cCodeForMethod: #arithmetic_127_multiply_127f32.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#arithmetic_127_multiply_127f32 */
-pub fn arithmetic_127_multiply_127f32() -> f32 {
+pub fn arithmetic_127_multiply_127f32(&self) -> f32 {
 	return 127 as f32 * 127.0;
 }'.
 
@@ -67,7 +67,7 @@ RustCodeGeneratorExamples >> code_arithmetic_127_plus_1 [
 
 	aCode := self generator cCodeForMethod: #arithmetic_127_plus_1.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#arithmetic_127_plus_1 */
-pub fn arithmetic_127_plus_1() -> i16 {
+pub fn arithmetic_127_plus_1(&self) -> i16 {
 	return 127 + 1;
 }'.
 
@@ -81,7 +81,7 @@ RustCodeGeneratorExamples >> code_arithmetic_127_plus_127 [
 
 	aCode := self generator cCodeForMethod: #arithmetic_127_plus_127.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#arithmetic_127_plus_127 */
-pub fn arithmetic_127_plus_127() -> i16 {
+pub fn arithmetic_127_plus_127(&self) -> i16 {
 	return 127 + 127;
 }'.
 
@@ -95,7 +95,7 @@ RustCodeGeneratorExamples >> code_arithmetic_127_plus_127f32 [
 
 	aCode := self generator cCodeForMethod: #arithmetic_127_plus_127f32.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#arithmetic_127_plus_127f32 */
-pub fn arithmetic_127_plus_127f32() -> f32 {
+pub fn arithmetic_127_plus_127f32(&self) -> f32 {
 	return 127 as f32 + 127.0;
 }'.
 
@@ -109,7 +109,7 @@ RustCodeGeneratorExamples >> code_arithmetic_127f32_multiply_127 [
 
 	aCode := self generator cCodeForMethod: #arithmetic_127f32_multiply_127.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#arithmetic_127f32_multiply_127 */
-pub fn arithmetic_127f32_multiply_127() -> f32 {
+pub fn arithmetic_127f32_multiply_127(&self) -> f32 {
 	return 127.0 * 127 as f32;
 }'.
 
@@ -123,7 +123,7 @@ RustCodeGeneratorExamples >> code_arithmetic_127f32_multiply_127f32 [
 
 	aCode := self generator cCodeForMethod: #arithmetic_127f32_multiply_127f32.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#arithmetic_127f32_multiply_127f32 */
-pub fn arithmetic_127f32_multiply_127f32() -> f32 {
+pub fn arithmetic_127f32_multiply_127f32(&self) -> f32 {
 	return 127.0 * 127.0;
 }'.
 
@@ -137,7 +137,7 @@ RustCodeGeneratorExamples >> code_arithmetic_127f32_plus_127 [
 
 	aCode := self generator cCodeForMethod: #arithmetic_127f32_plus_127.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#arithmetic_127f32_plus_127 */
-pub fn arithmetic_127f32_plus_127() -> f32 {
+pub fn arithmetic_127f32_plus_127(&self) -> f32 {
 	return 127.0 + 127 as f32;
 }'.
 
@@ -151,7 +151,7 @@ RustCodeGeneratorExamples >> code_arithmetic_127f32_plus_127f32 [
 
 	aCode := self generator cCodeForMethod: #arithmetic_127f32_plus_127f32.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#arithmetic_127f32_plus_127f32 */
-pub fn arithmetic_127f32_plus_127f32() -> f32 {
+pub fn arithmetic_127f32_plus_127f32(&self) -> f32 {
 	return 127.0 + 127.0;
 }'.
 
@@ -165,8 +165,8 @@ RustCodeGeneratorExamples >> code_arithmetic_128_minus_1 [
 
 	aCode := self generator cCodeForMethod: #arithmetic_128_minus_1.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#arithmetic_128_minus_1 */
-pub fn arithmetic_128_minus_1() -> i16 {
-	return 128 - 1;
+pub fn arithmetic_128_minus_1(&self) -> i16 {
+	return 128 - 1 as i16;
 }'.
 
 	^ aCode
@@ -179,7 +179,7 @@ RustCodeGeneratorExamples >> code_arithmetic_128_minus_1f32 [
 
 	aCode := self generator cCodeForMethod: #arithmetic_128_minus_1f32.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#arithmetic_128_minus_1f32 */
-pub fn arithmetic_128_minus_1f32() -> f32 {
+pub fn arithmetic_128_minus_1f32(&self) -> f32 {
 	return 128 as f32 - 1.0;
 }'.
 
@@ -193,7 +193,7 @@ RustCodeGeneratorExamples >> code_arithmetic_128f32_minus_1 [
 
 	aCode := self generator cCodeForMethod: #arithmetic_128f32_minus_1.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#arithmetic_128f32_minus_1 */
-pub fn arithmetic_128f32_minus_1() -> f32 {
+pub fn arithmetic_128f32_minus_1(&self) -> f32 {
 	return 128.0 - 1 as f32;
 }'.
 
@@ -207,7 +207,7 @@ RustCodeGeneratorExamples >> code_arithmetic_128f32_minus_1f32 [
 
 	aCode := self generator cCodeForMethod: #arithmetic_128f32_minus_1f32.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#arithmetic_128f32_minus_1f32 */
-pub fn arithmetic_128f32_minus_1f32() -> f32 {
+pub fn arithmetic_128f32_minus_1f32(&self) -> f32 {
 	return 128.0 - 1.0;
 }'.
 
@@ -221,7 +221,7 @@ RustCodeGeneratorExamples >> code_arithmetic_1_minus_1 [
 
 	aCode := self generator cCodeForMethod: #arithmetic_1_minus_1.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#arithmetic_1_minus_1 */
-pub fn arithmetic_1_minus_1() -> i8 {
+pub fn arithmetic_1_minus_1(&self) -> i8 {
 	return 1 - 1;
 }'.
 
@@ -235,8 +235,8 @@ RustCodeGeneratorExamples >> code_arithmetic_negated128_minus_128 [
 
 	aCode := self generator cCodeForMethod: #arithmetic_negated128_minus_128.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#arithmetic_negated128_minus_128 */
-pub fn arithmetic_negated128_minus_128() -> i16 {
-	return -128 - 128;
+pub fn arithmetic_negated128_minus_128(&self) -> i16 {
+	return -128 as i16 - 128;
 }'.
 
 	^ aCode
@@ -259,7 +259,7 @@ RustCodeGeneratorExamples >> code_ifFalse [
 
 	aCode := self generator cCodeForMethod: #ifFalse.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#ifFalse */
-pub fn if_false() -> Option<bool> {
+pub fn if_false(&self) -> Option<bool> {
 	return false;
 }'.
 
@@ -273,7 +273,7 @@ RustCodeGeneratorExamples >> code_ifTrue [
 
 	aCode := self generator cCodeForMethod: #ifTrue.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#ifTrue */
-pub fn if_true() -> Option<bool> {
+pub fn if_true(&self) -> Option<bool> {
 	return true;
 }'.
 
@@ -287,7 +287,7 @@ RustCodeGeneratorExamples >> code_integersLessThan [
 
 	aCode := self generator cCodeForMethod: #integersLessThan.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#integersLessThan */
-pub fn integers_less_than() -> bool {
+pub fn integers_less_than(&self) -> bool {
 	return 5 < 10;
 }'.
 
@@ -301,7 +301,7 @@ RustCodeGeneratorExamples >> code_literalArrayOfIntegers [
 	
 	aCode := self generator cCodeForMethod: #literalArrayOfIntegers.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#literalArrayOfIntegers */
-pub fn literal_array_of_integers() -> [i8; 6] {
+pub fn literal_array_of_integers(&self) -> [i8; 6] {
 	return [0, 1, 2, 3, 4, 5];
 }'.
 
@@ -325,7 +325,7 @@ RustCodeGeneratorExamples >> code_returnFalse [
 		
 	aCode := self generator cCodeForMethod: #returnFalse.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#returnFalse */
-pub fn return_false() -> bool {
+pub fn return_false(&self) -> bool {
 	return false;
 }'.
 
@@ -339,8 +339,35 @@ RustCodeGeneratorExamples >> code_returnNegativeOne [
 		
 	aCode := self generator cCodeForMethod: #returnNegativeOne.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#returnNegativeOne */
-pub fn return_negative_one() -> i8 {
+pub fn return_negative_one(&self) -> i8 {
 	return -1;
+}'.
+
+	^ aCode
+]
+
+{ #category : #'examples - return' }
+RustCodeGeneratorExamples >> code_returnNil [
+	<gtExample>
+	| aCode |
+
+	aCode := self generator cCodeForMethod: #returnNil.
+	self assert: aCode equals: '/* RustSlangCodeClass>>#returnNil */
+pub fn return_nil(&self) {
+	return /* nil */;
+}'.
+
+	^ aCode
+]
+
+{ #category : #'examples - return' }
+RustCodeGeneratorExamples >> code_returnSelf [
+	<gtExample>
+	| aCode |
+
+	aCode := self generator cCodeForMethod: #returnSelf.
+	self assert: aCode equals: '/* RustSlangCodeClass>>#returnSelf */
+pub fn return_self(&self) {
 }'.
 
 	^ aCode
@@ -353,7 +380,7 @@ RustCodeGeneratorExamples >> code_returnString [
 		
 	aCode := self generator cCodeForMethod: #returnString.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#returnString */
-pub fn return_string() -> String {
+pub fn return_string(&self) -> String {
 	return "Hello".to_string();
 }'.
 	
@@ -367,7 +394,7 @@ RustCodeGeneratorExamples >> code_returnTrue [
 		
 	aCode := self generator cCodeForMethod: #returnTrue.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#returnTrue */
-pub fn return_true() -> bool {
+pub fn return_true(&self) -> bool {
 	return true;
 }'.
 
@@ -378,8 +405,12 @@ pub fn return_true() -> bool {
 RustCodeGeneratorExamples >> code_returnZero [
 	<gtExample>
 	| aCode |
-		
+
 	aCode := self generator cCodeForMethod: #returnZero.
+	self assert: aCode equals: '/* RustSlangCodeClass>>#returnZero */
+pub fn return_zero(&self) -> i8 {
+	return 0;
+}'.
 
 	^ aCode
 ]
@@ -391,7 +422,7 @@ RustCodeGeneratorExamples >> code_returnZeroFloat [
 
 	aCode := self generator cCodeForMethod: #returnZeroFloat.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#returnZeroFloat */
-pub fn return_zero_float() -> f32 {
+pub fn return_zero_float(&self) -> f32 {
 	return 0.0;
 }'.
 
@@ -405,7 +436,7 @@ RustCodeGeneratorExamples >> code_selfTrueOrFalse [
 	
 	aCode := self generator cCodeForMethod: #selfTrueOrFalse.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#selfTrueOrFalse */
-pub fn self_true_or_false() -> bool {
+pub fn self_true_or_false(&self) -> bool {
 	return self.true_or_false();
 }'.
 
@@ -439,7 +470,7 @@ RustCodeGeneratorExamples >> code_trueAndFalse [
 	
 	aCode := self generator cCodeForMethod: #trueAndFalse.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#trueAndFalse */
-pub fn true_and_false() -> bool {
+pub fn true_and_false(&self) -> bool {
 	return false;
 }'.
 	
@@ -453,7 +484,7 @@ RustCodeGeneratorExamples >> code_trueOrFalse [
 	
 	aCode := self generator cCodeForMethod: #trueOrFalse.
 	self assert: aCode equals: '/* RustSlangCodeClass>>#trueOrFalse */
-pub fn true_or_false() -> bool {
+pub fn true_or_false(&self) -> bool {
 	return true;
 }'.
 

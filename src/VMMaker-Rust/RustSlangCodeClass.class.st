@@ -13,7 +13,7 @@ Class {
 { #category : #translation }
 RustSlangCodeClass class >> implicitReturnTypeFor: aSelector [
 	"Answer the return type for methods that don't have an explicit return."
-	^ RustUnknownType new
+	^ RustVoid new
 ]
 
 { #category : #initialization }
@@ -158,8 +158,18 @@ RustSlangCodeClass >> returnNegativeOne [
 ]
 
 { #category : #return }
+RustSlangCodeClass >> returnNil [
+	^ nil
+]
+
+{ #category : #return }
 RustSlangCodeClass >> returnOne [
 	^ 1
+]
+
+{ #category : #return }
+RustSlangCodeClass >> returnSelf [
+	^ self
 ]
 
 { #category : #return }

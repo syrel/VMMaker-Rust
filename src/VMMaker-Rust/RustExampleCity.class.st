@@ -24,11 +24,26 @@ RustExampleCity >> location [
 ]
 
 { #category : #accessing }
+RustExampleCity >> location: anObject [
+	location := anObject
+]
+
+{ #category : #accessing }
 RustExampleCity >> name [
 	^ name
 ]
 
 { #category : #accessing }
+RustExampleCity >> name: anObject [
+	name := anObject
+]
+
+{ #category : #accessing }
 RustExampleCity >> population [
 	^ population
+]
+
+{ #category : #accessing }
+RustExampleCity >> population: anObject [
+	population := anObject
 ]

@@ -515,39 +515,6 @@ RustMethod >> elideAnyFinalReturn [
 ]
 
 { #category : #'C code generation' }
-RustMethod >> emitCCodeOn: aStream generator: aCodeGenerator [
-	"Emit Rust code for this method onto the given stream.
-	 All calls to inlined methods should already have been expanded."
-	| bodyStream conditional |
-
-	aCodeGenerator currentMethod: self.
-	usedVariablesCache := Set new.
-	
-	"place method comment and method name before function."
-	self emitCCommentOn: aStream.	
-	aStream nextPutAll: '/* '; nextPutAll: self definingClass name; nextPutAll: '>>#'; nextPutAll: self smalltalkSelector; nextPutAll: ' */'.	
-	aStream cr.
-
-	conditional := self emitCFunctionPrototype: aStream generator: aCodeGenerator isPrototype: false.
-	aStream space; nextPut: ${.
-	
-	bodyStream := ReadWriteStream on: (ByteString new: 128).
-	aCodeGenerator "Generation will note used variables in usedVariablesCache"
-		pushScope: declarations
-		while: [parseTree emitCCodeOn: bodyStream level: 1 generator: aCodeGenerator].
-	self emitCLocalsOn: aStream generator: aCodeGenerator.
-	usedVariablesCache := nil.
-	aStream nextPutAll: bodyStream contents.
-
-	(returnType = #void or: [parseTree endsWithReturn]) ifFalse:
-		[aStream tab; nextPutAll: 'return 0;'; cr].
-	aStream nextPut: $}.
-
-	conditional ifTrue:
-		[self terminateConditionalDefineFor: self compileTimeOptionPragmas on: aStream]
-]
-
-{ #category : #'C code generation' }
 RustMethod >> emitCCommentOn: aStream [
 	"Emit the transferred Smalltalk comments as C comments."
 
@@ -694,9 +661,6 @@ RustMethod >> emitCodeOn: aStream level: aLevel generator: aCodeGenerator [
 	self emitCLocalsOn: aStream generator: aCodeGenerator.
 	usedVariablesCache := nil.
 	aStream nextPutAll: bodyStream contents.
-
-	(returnType = #void or: [parseTree endsWithReturn]) ifFalse:
-		[aStream tab: aLevel + 1; nextPutAll: 'return 0;'; cr].
 	aStream tab: aLevel; nextPut: $}.
 
 	conditional ifTrue:
@@ -735,27 +699,24 @@ RustMethod >> emitFunctionPrototype: aStream level: aLevel generator: aCodeGen i
 	returnTypeIsFunctionPointer := returnType isPointer.
 
 	export 
-		ifTrue: [ aStream nextPutAll: 'EXPORT('; nextPutAll: returnType; nextPut: $) ]
+		ifTrue: [ aStream nextPutAll: '#[no_mangle]' ]
 		ifFalse: [
-			self isStatic
-				ifTrue: [aStream tab: aLevel; nextPutAll: 'pub ']
-				ifFalse: [ isPrototype ifTrue: [ aStream nextPutAll: 'extern ' ] ].
-
 			isPrototype ifFalse: [
 				inline = #always
 					ifTrue: [ aStream nextPutAll: '#[inline(always)]'; cr ].
 				inline = #never
 					ifTrue: [ aStream nextPutAll: '#[inline(never)]'; cr ] ] ].
-	
+
 	aStream
-		nextPutAll: 'fn ';
+		tab: aLevel;
+		nextPutAll: 'pub fn ';
 		nextPutAll: (aCodeGen cFunctionNameFor: selector);
 		nextPut: $(.
-		
+
 	self isInstanceSide ifTrue: [
 		aStream nextPutAll: '&self'.
 		args ifNotEmpty: [ aStream nextPutAll: ', ' ]. ].
-	
+
 	args isEmpty
 		ifFalse: [
 			args
@@ -764,9 +725,11 @@ RustMethod >> emitFunctionPrototype: aStream level: aLevel generator: aCodeGen i
 
 	aStream nextPut: $).
 	
-	aStream
-		nextPutAll: ' -> ';
-		nextPutAll: returnType asRustTypeName.
+	returnType isVoid
+		ifFalse: [
+			aStream
+				nextPutAll: ' -> ';
+				nextPutAll: returnType asRustTypeName. ].
 
 	(functionAttributes isNil or: [returnTypeIsFunctionPointer]) ifFalse:
 		[aStream space; nextPutAll: functionAttributes].

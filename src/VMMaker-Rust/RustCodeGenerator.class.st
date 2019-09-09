@@ -670,7 +670,7 @@ RustCodeGenerator >> cCodeForMethod: aSelector [
 		ifNil: [ self error: 'method not found in code base: ', aSelector ].
 
 	aStream := (ReadWriteStream on: '').
-	aRustTMethod emitCCodeOn: aStream generator: self.
+	aRustTMethod emitCodeOn: aStream level: 0 generator: self.
 	^ aStream contents
 ]
 
@@ -1387,7 +1387,7 @@ RustCodeGenerator >> emitCMethods: methodList on: aStream [
 				bar value: i.
 				(m isRealMethod
 				 and: [self shouldGenerateMethod: m]) ifTrue:
-					[m emitCCodeOn: aStream generator: self]]]
+					[m emitCodeOn: aStream level: 0 generator: self]]]
 ]
 
 { #category : #'C code generator' }
@@ -2371,7 +2371,7 @@ RustCodeGenerator >> generateIfTrueAsArgument: msgNode on: aStream indent: level
 		ifNotNil: [ :const |
 			const
 				ifTrue: [ msgNode args first emitCCodeAsArgumentOn: aStream level: level generator: self ]
-				ifFalse: [ aStream nextPutAll: (self cLiteralFor: nil) ] ]
+				ifFalse: [ aStream nextPutAll: 'None' ] ]
 ]
 
 { #category : #'C translation' }
@@ -3436,17 +3436,17 @@ RustCodeGenerator >> ifStaticallyResolvedPolymorphicReceiverThenUpdateSelectorIn
 { #category : #'type inference' }
 RustCodeGenerator >> implicitReturnTypeFor: aSelector [
 	"Answer the default return type for methods of the defining class of
-	 aSelector. Default to #RustUnknownType if there is no method, or if the method's
+	 aSelector. Default to #RustVoid if there is no method, or if the method's
 	 defining class doesn't understand implicitReturnTypeFor:."
 	| aRustMethod |
 
 	aRustMethod := methods
 		at: aSelector
-		ifAbsent: [^ RustUnknownType new ].
+		ifAbsent: [^ RustVoid new ].
 
 	^ (aRustMethod definingClass respondsTo: #implicitReturnTypeFor:)
 		ifTrue: [ aRustMethod definingClass implicitReturnTypeFor: aSelector ]
-		ifFalse: [ RustUnknownType new ]
+		ifFalse: [ RustVoid new ]
 ]
 
 { #category : #accessing }

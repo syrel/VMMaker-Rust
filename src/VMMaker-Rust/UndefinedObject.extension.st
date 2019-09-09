@@ -4,5 +4,5 @@ Extension { #name : #UndefinedObject }
 UndefinedObject >> asRustType [
 	<return: #RustTypedValue>
 
-	^ RustNone value: self
+	^ RustVoid value: self
 ]
