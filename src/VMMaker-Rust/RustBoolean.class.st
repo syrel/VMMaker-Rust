@@ -21,6 +21,13 @@ RustBoolean >> asRustLiteral [
 ]
 
 { #category : #converting }
+RustBoolean >> asRustTypeGroup [
+	<return: #Symbol>
+	
+	^ #boolean
+]
+
+{ #category : #converting }
 RustBoolean >> asRustTypeName [
 	^ 'bool'
 ]

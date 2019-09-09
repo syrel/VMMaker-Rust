@@ -26,6 +26,14 @@ RustInt32 >> assertValueType: anObject [
 		description: [ 'Must be 16 to 31 bit integer' ].
 ]
 
+{ #category : #'as yet unclassified' }
+RustInt32 >> largerType [
+	"Return a larger type of me if possible"
+	<return: #RustInteger>
+	
+	^ RustInt64 new
+]
+
 { #category : #accessing }
 RustInt32 >> sizeOf [
 	^ 4

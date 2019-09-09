@@ -34,7 +34,8 @@ Class {
 		'breakSrcInlineSelectors',
 		'breakDestInlineSelectors',
 		'breakOnInline',
-		'vmMaker'
+		'vmMaker',
+		'classes'
 	],
 	#classVars : [
 		'NoRegParmsInAssertVMs'
@@ -542,14 +543,16 @@ RustCodeGenerator >> addVariablesInVerbatimCIn: aCCodeSendNode to: aCollection [
 { #category : #utilities }
 RustCodeGenerator >> anyMethodNamed: selector [
 	"Answer any method in the code base (including api methods) with the given selector."
+	<return: #RustTMethod>
+	
+	self assertApiMethodsNotNil.
 
-	^methods
+	^ methods
 		at: selector
-		ifAbsent:
-			[apiMethods ifNotNil:
-				[apiMethods
-					at: selector
-					ifAbsent: []]]
+		ifAbsent: [
+			apiMethods
+				at: selector
+				ifAbsent: [] ]
 ]
 
 { #category : #utilities }
@@ -592,6 +595,13 @@ RustCodeGenerator >> arrayInitializerCalled: varName for: array sizeString: size
 				 s crtab; nextPut: $}]]
 ]
 
+{ #category : #'initialize-release' }
+RustCodeGenerator >> assertApiMethodsNotNil [
+	self
+		assert: [ apiMethods isNotNil ]
+		description: [ 'Api methods must not be nil' ]
+]
+
 { #category : #utilities }
 RustCodeGenerator >> baseTypeForPointerType: aCType [
 	"Answer the type of the referent of a pointer type."
@@ -603,7 +613,7 @@ RustCodeGenerator >> baseTypeForPointerType: aCType [
 RustCodeGenerator >> baseTypeForType: aCType [
 	"Reduce various declarations to the most basic type we can determine."
 	| type fpIndex closeidx openidx |
-	
+
 	true ifTrue: [ ^ aCType asRustBaseType ].
 	
 	type := aCType.
@@ -879,7 +889,9 @@ RustCodeGenerator >> collectInlineList: strategy [
 		
 	selectorsOfMethodsNotToInline := Set new: methods size.
 	selectorsOfMethodsNotToInline addAll: macros keys.
-	apiMethods ifNotNil: [ selectorsOfMethodsNotToInline addAll: apiMethods keys ].
+	
+	self assertApiMethodsNotNil.
+	selectorsOfMethodsNotToInline addAll: apiMethods keys.
 	selectorsOfMethodsNotToInline addAll: self structAccessorSelectors.
 
 	"build dictionary to record the number of calls to each method"
@@ -987,7 +999,7 @@ RustCodeGenerator >> computeKernelReturnTypes [
 	^dictionary
 ]
 
-{ #category : #public }
+{ #category : #'public - variable declaration' }
 RustCodeGenerator >> const: constName declareC: declarationString [
 	"Record the given C declaration for a constant."
 
@@ -1025,7 +1037,7 @@ RustCodeGenerator >> currentMethod: aTMethod [
 	currentMethod := aTMethod
 ]
 
-{ #category : #public }
+{ #category : #'public - variable declaration' }
 RustCodeGenerator >> declareModuleName: nameString [
 	"add the declaration of a module name, version and local/external tag"
 
@@ -1040,7 +1052,7 @@ RustCodeGenerator >> declareModuleName: nameString [
 	^nameString, ' (i)'
 ]
 
-{ #category : #public }
+{ #category : #'public - variable declaration' }
 RustCodeGenerator >> declareVar: varName type: type [
 	"This both creates a varable and provides its type"
 	self var: (variables add: varName asString) type: type
@@ -1112,10 +1124,12 @@ RustCodeGenerator >> doInlining: inlineFlagOrSymbol [
 { #category : #utilities }
 RustCodeGenerator >> emitBuiltinConstructAsArgumentFor: msgNode on: aStream level: level [
 	"If the given selector is in the translation dictionary, translate it into a target code construct and return true. Otherwise, do nothing and return false."
-
 	| action |
-	(self shouldGenerateAsInterpreterProxySend: msgNode) ifTrue:
-		[^false].
+	<return: #Boolean>
+	
+	(self shouldGenerateAsInterpreterProxySend: msgNode)
+		ifTrue: [ ^ false ].
+
 	action := asArgumentTranslationDict
 				at: msgNode selector
 				ifAbsent: [translationDict at: msgNode selector ifAbsent: [ ^false ]].
@@ -1276,7 +1290,11 @@ RustCodeGenerator >> emitCExpression: aParseNode on: aStream indent: level [
 		ifFalse: 
 			[aStream nextPut: $(.
 			 aParseNode emitCCodeAsExpressionOn: aStream level: level generator: self.
-			 aStream nextPut: $)]
+			 aStream nextPut: $).
+			
+			(aParseNode typeOrNilFrom: self in: currentMethod) isOption
+				ifTrue: [ aStream nextPutAll: '.unwrap()' ].
+			]
 ]
 
 { #category : #'C code generator' }
@@ -1426,6 +1444,41 @@ RustCodeGenerator >> emitCVariablesOn: aStream [
 	aStream cr
 ]
 
+{ #category : #'api - code generator' }
+RustCodeGenerator >> emitClass: aClass on: aStream [
+	self emitClassDeclaration: aClass on: aStream.
+]
+
+{ #category : #'api - code generator' }
+RustCodeGenerator >> emitClassDeclaration: aClass on: aStream [
+	| theInstanceVariables |
+	aStream nextPutAll: 'struct '.
+	aStream nextPutAll: aClass name.
+	aStream nextPutAll: ' {'; cr.
+
+	theInstanceVariables := aClass instanceVariables collect: [ :eachVariableName |
+		RustInstanceVariable new
+			variableClass: aClass;
+			name: eachVariableName;
+			type: (aClass rustInstanceVariableTypeOf: eachVariableName).
+	].
+	
+	self emitVariables: theInstanceVariables on: aStream indent: 1.
+	
+	aStream cr; nextPutAll: '}'
+]
+
+{ #category : #'api - code generator' }
+RustCodeGenerator >> emitClassImplementation: aClass on: aStream [
+	| theInstanceVariables |
+	
+	
+]
+
+{ #category : #'api - code generator' }
+RustCodeGenerator >> emitConstants: theDeclarations on: aStream indent: level [
+]
+
 { #category : #'C code generator' }
 RustCodeGenerator >> emitExportsNamed: exportsNamePrefix pluginName: pluginName on: aStream [
 	"Store all the exported primitives in the form used by the internal named prim system."
@@ -1505,6 +1558,17 @@ RustCodeGenerator >> emitHeaderFiles: headerFilesSubSequence on: aStream [
 		aStream nextPutAll: hdr; cr]
 ]
 
+{ #category : #'api - code generator' }
+RustCodeGenerator >> emitVariables: theDeclarations on: aStream indent: level [
+
+	theDeclarations do: [ :eachVariable |
+		aStream tab: level.
+		aStream nextPutAll: eachVariable name.
+		aStream nextPutAll: ' : '.
+		aStream nextPutAll: eachVariable type asRustTypeName ]
+		separatedBy: [ aStream nextPut: $,; cr ]
+]
+
 { #category : #public }
 RustCodeGenerator >> exportedPrimitiveNames [
 	"Return an array of all exported primitives"
@@ -1582,8 +1646,7 @@ RustCodeGenerator >> generateAbs: msgNode on: aStream indent: level [
 	"Generate the Rust code for this message onto the given stream."
 
 	self emitCExpression: msgNode receiver on: aStream.
-	aStream nextPut: $..
-	aStream nextPutAll: 'abs()'
+	aStream nextPutAll: '.abs()'
 ]
 
 { #category : #'C translation' }
@@ -2310,7 +2373,9 @@ RustCodeGenerator >> generateIfTrue: msgNode on: aStream indent: level [
 
 	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
 		ifNil:
-			[aStream nextPutAll: 'if ('.
+			[
+			self halt.
+			aStream nextPutAll: 'if ('.
 			msgNode receiver emitCCodeAsExpressionOn: aStream level: level generator: self.
 			aStream nextPutAll: ') {'; cr.
 			msgNode args first emitCCodeOn: aStream level: level + 1 generator: self.
@@ -2324,20 +2389,25 @@ RustCodeGenerator >> generateIfTrue: msgNode on: aStream indent: level [
 
 { #category : #'C translation' }
 RustCodeGenerator >> generateIfTrueAsArgument: msgNode on: aStream indent: level [
-	"Generate the C code for this message onto the given stream."
+	"I generate the rust code for #ifTrue: assuming that the result is then used
+	either as a return value or to be assigned to a variable.
+	Generate the Rust code for this message onto the given stream."
 
 	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
-		ifNil:
-			[aStream nextPut: $(.
-			 msgNode receiver emitCCodeAsArgumentOn: aStream level: level generator: self.
-			 aStream crtab: level + 1; nextPut: $?; space.
-			 msgNode args first emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
-			 aStream crtab: level + 1; nextPutAll: ': 0)']
-		ifNotNil:
-			[:const|
+		ifNil: [
+			aStream nextPutAll: 'if '.
+			msgNode receiver emitCCodeAsArgumentOn: aStream level: level generator: self.
+			aStream nextPutAll: ' {'; crtab: level + 1.
+			aStream nextPutAll: 'Some('.
+			msgNode args first emitCCodeAsArgumentOn: aStream level: level + 1 generator: self.
+			aStream nextPutAll: ')'.
+			aStream crtab: level; nextPutAll: ' } else {'.
+			aStream crtab: level + 1; nextPutAll: 'None'.
+			aStream crtab: level; nextPutAll: '}' ]
+		ifNotNil: [ :const |
 			const
-				ifTrue: [msgNode args first emitCCodeAsArgumentOn: aStream level: level generator: self]
-				ifFalse: [aStream nextPutAll: (self cLiteralFor: nil)]]
+				ifTrue: [ msgNode args first emitCCodeAsArgumentOn: aStream level: level generator: self ]
+				ifFalse: [ aStream nextPutAll: (self cLiteralFor: nil) ] ]
 ]
 
 { #category : #'C translation' }
@@ -2736,6 +2806,7 @@ RustCodeGenerator >> generatePlus: msgNode on: aStream indent: level [
 			[:value|
 			 value = 0 ifTrue:
 				[^self emitCExpression: msgNode receiver on: aStream]].
+	
 		 self emitCExpression: msgNode receiver on: aStream.
 		 aStream nextPutAll: ' + '.
 		 self emitCExpression: msgNode args first on: aStream]
@@ -3302,12 +3373,21 @@ RustCodeGenerator >> globalsAsSet [
 	^variables
 ]
 
-{ #category : #'type inference' }
+{ #category : #'private - type inference' }
 RustCodeGenerator >> harmonizeReturnTypesIn: aSetOfTypes [
 	"Eliminate signed/unsigned conflicts in aSetOfTypes. Non-negative integers can be either
 	 signed or unsigned. Ignore them unless there are no types, in which case default to sqInt."
+	| theTypeGroups |
 	
-	^ aSetOfTypes
+	aSetOfTypes size <= 1
+		ifTrue: [ ^ aSetOfTypes ].
+	
+	theTypeGroups := aSetOfTypes groupedBy: [ :eachType | eachType asRustTypeGroup ].
+	self
+		assert: [ theTypeGroups size = 1 ]
+		description: [ 'Conflict can not be solved' ].
+
+	^ Set with: (theTypeGroups values first detectMax: [ :eachType | eachType sizeOf ])
 ]
 
 { #category : #public }
@@ -3328,60 +3408,68 @@ RustCodeGenerator >> ifStaticallyResolvedPolymorphicReceiverThenUpdateSelectorIn
 
 { #category : #'type inference' }
 RustCodeGenerator >> implicitReturnTypeFor: aSelector [
-	"Answer the default return type for mthods of the defining class of
+	"Answer the default return type for methods of the defining class of
 	 aSelector. Default to #RustUnknownType if there is no method, or if the method's
 	 defining class doesn't understand implicitReturnTypeFor:."
-	| m |
-	
-	m := methods at: aSelector ifAbsent: [^ RustUnknownType new ].
-	^[m definingClass implicitReturnTypeFor: aSelector]
-		on: MessageNotUnderstood
-		do: [:ex|
-			ex message selector ~~ #implicitReturnTypeFor: ifTrue:
-				[ex pass].
-			RustUnknownType new ]
+	| aRustMethod |
+
+	aRustMethod := methods
+		at: aSelector
+		ifAbsent: [^ RustUnknownType new ].
+
+	^ (aRustMethod definingClass respondsTo: #implicitReturnTypeFor:)
+		ifTrue: [ aRustMethod definingClass implicitReturnTypeFor: aSelector ]
+		ifFalse: [ RustUnknownType new ]
 ]
 
 { #category : #accessing }
 RustCodeGenerator >> includeAPIFrom: aCCodeGenerator [
 	apiMethods := aCCodeGenerator selectAPIMethods.
+	self assertApiMethodsNotNil.
+
 	apiVariables := aCCodeGenerator selectAPIVariables
 ]
 
-{ #category : #'type inference' }
+{ #category : #'private - type inference' }
+RustCodeGenerator >> inferReturnTypeForSimpleMethod: aRustMethod [
+	"Make an initial pass to assign the return types of a simple method that return constants,
+	 or those that have explicit return types."	
+
+
+	"must precede recordDeclarationsIn: because it may set returnType"
+	aRustMethod removeFinalSelfReturnIn: self.
+
+	aRustMethod recordDeclarationsIn: self.
+	(aRustMethod returnType isNil and: [ aRustMethod isReturnConstant ])
+		ifTrue: [ aRustMethod inferReturnTypeIn: self ]
+]
+
+{ #category : #'public - type inference' }
 RustCodeGenerator >> inferTypesForImplicitlyTypedVariablesAndMethods [
-	"Infer the return tupe and the types of untyped variables.
+	"Infer the return type and the types of untyped variables.
 	 As far as variables go, for now we try only to infer variables
 	 assigned the result of #longLongAt:, but much more could be
 	 done here."
 
-	"Iterate over all methods, inferring #void return types, until we reach a fixed point."
 	| allMethods |
+
+	self assertApiMethodsNotNil.
+	allMethods := (Set withAll: methods) addAll: apiMethods; yourself.
 	
-	allMethods := apiMethods
-					ifNil: [methods]
-					ifNotNil: [(Set withAll: methods)
-								addAll: apiMethods;
-								yourself].
 	"Make an initial pass to assign the return types of all simple methods that return constants,
-	 or those that have explicit return types."						
-	allMethods do:
-		[:m|
-		m removeFinalSelfReturnIn: self. "must precede recordDeclarationsIn: because it may set returnType"
-		m recordDeclarationsIn: self.
-		(m returnType isNil
-		 and: [m isReturnConstant]) ifTrue:
-			[m inferReturnTypeIn: self]].
+	 or those that have explicit return types."	
+	allMethods do: [ :eachMethod | self inferReturnTypeForSimpleMethod: eachMethod ].
 
 	"now iterate until we reach a fixed point"
-	[| changedReturnType |
-	 changedReturnType := false.
-	 allMethods do:
-		[:m|
-		 m inferTypesForImplicitlyTypedVariablesIn: self.
-		 (m inferReturnTypeIn: self) ifTrue:
-			[changedReturnType := true]].
-	 changedReturnType] whileTrue.
+	
+	[
+		| changedReturnType |
+	 	changedReturnType := false.
+	 	allMethods do: [ :eachMethod |
+			eachMethod inferTypesForImplicitlyTypedVariablesIn: self.
+			(eachMethod inferReturnTypeIn: self)
+				ifTrue: [ changedReturnType := true ]].
+		changedReturnType ] whileTrue.
 
 	"Type all as-yet-untyped methods as the default"
 	methods do:
@@ -3405,7 +3493,10 @@ RustCodeGenerator >> initialize [
 	constants := Dictionary new: 100.
 	variables := Set new: 100.
 	variableDeclarations := Dictionary new: 100.
+	
 	methods := Dictionary new: 500.
+	apiMethods := Dictionary new.
+	
 	kernelReturnTypes := self computeKernelReturnTypes.
 	macros := Dictionary new.
 	self initializeCTranslationDictionary.
@@ -3877,6 +3968,7 @@ RustCodeGenerator >> isQuickCompiledMethod: aCompiledMethod [
 RustCodeGenerator >> isSimpleType: aType [
 	"For the purposes of the read-before-written initializer, answer if
 	 aType is simple, e.g. not a structure, and array or an opaque type."
+	<return: #Boolean>
 	
 	^ aType isSimple
 ]
@@ -4616,6 +4708,8 @@ RustCodeGenerator >> promoteArithmeticTypes: firstType and: secondType [
 	 It is important to choose deterministically to get stable source generation.
 	 Also, the behaviour of inlined and non inlined code should be unchanged."
 	
+	self halt.
+	
 	((#(#double float) includes: firstType)
 	 or: [#(#double float) includes: secondType]) ifTrue:
 		[^(firstType = #double or: [secondType = #double])
@@ -4662,6 +4756,8 @@ RustCodeGenerator >> promoteIntegerArithmeticTypes: firstType and: secondType [
 
 	This is so that the generated code behaviour is insensitive to inlining."
 	| length1 length2 intSize |
+	
+	self halt.
 	
 	length1 := self sizeOfIntegralCType: firstType.
 	length2 := self sizeOfIntegralCType: secondType.
@@ -5043,22 +5139,20 @@ RustCodeGenerator >> selectAPIVariables [
 { #category : #'C code generator' }
 RustCodeGenerator >> selectorReturnsPointerToStruct: selector [ "<Symbol>"
 	| tMethod |
+	self assertApiMethodsNotNil.
 	^(tMethod := methods
 					at: selector
-					ifAbsent:
-						[apiMethods ifNotNil:
-							[apiMethods at: selector ifAbsent: []]]) notNil
+					ifAbsent: [ apiMethods at: selector ifAbsent: []]) notNil
 	  and: [VMStructType isTypePointerToStruct: tMethod returnType]
 ]
 
 { #category : #'C code generator' }
 RustCodeGenerator >> selectorReturnsStruct: selector [ "<Symbol>"
 	| tMethod |
+	self assertApiMethodsNotNil.
 	^(tMethod := methods
 					at: selector
-					ifAbsent:
-						[apiMethods ifNotNil:
-							[apiMethods at: selector ifAbsent: []]]) notNil
+					ifAbsent: [apiMethods at: selector ifAbsent: []]) notNil
 	  and: [VMStructType isTypeStruct: tMethod returnType]
 ]
 
@@ -5401,7 +5495,6 @@ RustCodeGenerator >> tryToCollapseBothArmsOfConditionalExpression: msgNode on: a
 
 { #category : #'type inference' }
 RustCodeGenerator >> typeFor: aNode in: aTMethod [
-	self halt.
 
 	^aNode typeFrom: self in: aTMethod
 ]
@@ -5427,16 +5520,10 @@ RustCodeGenerator >> typeForArithmetic: sendNode in: aTMethod [
 		 ^rcvrType isPointer
 			ifTrue: [rcvrType]
 			ifFalse: [argType]].
+		
+	rcvrType ifNil: [ rcvrType := RustUnknownType new ].
 	
-	true ifTrue: [ ^ rcvrType perform: sendNode selector with: argType ].
-	
-	^(self promoteArithmeticTypes: rcvrType and: argType) ifNotNil:
-		[:promotedType|
-		 "We have to be very careful with subtraction.  The difference between two unsigned types is signed.
-		  But we don't want unsigned - constant to be signed.  We almost always want this to stay unsigned."
-		 (sendNode selector == #- and: [promotedType first == $u and: [(arg isConstant and: [arg value isInteger]) not]])
-			ifTrue: [promotedType allButFirst: ((promotedType beginsWith: 'unsigned') ifTrue: [9] ifFalse: [1])]
-			ifFalse: [promotedType]]
+	^ rcvrType perform: sendNode selector with: argType
 ]
 
 { #category : #'type inference' }
@@ -5444,7 +5531,7 @@ RustCodeGenerator >> typeForConditional: sendNode in: aTMethod [
 	"Answer the return type for a conditional, ifTrue:ifFalse: et al"
 	| firstType secondType |
 	
-	self halt.
+	
 	
 	firstType := self typeFor: sendNode args first statements last in: aTMethod.
 	sendNode selector numArgs = 1 ifTrue:
@@ -5554,7 +5641,7 @@ RustCodeGenerator >> useSymbolicConstants: aBool [
 	useSymbolicConstants := aBool
 ]
 
-{ #category : #public }
+{ #category : #'public - variable declaration' }
 RustCodeGenerator >> var: varName declareC: declarationString [
 	"Record the given C declaration for a global variable."
 
@@ -5563,14 +5650,15 @@ RustCodeGenerator >> var: varName declareC: declarationString [
 	variableDeclarations at: varName asString put: declarationString.
 ]
 
-{ #category : #public }
+{ #category : #'public - variable declaration' }
 RustCodeGenerator >> var: varName type: type [
 	"Use this in preference to #var:declareC: when ever possible since it avoids typing
 	 the varname twice and thus avoids the potential for a typo. See also #var:type:array:"
+
 	self var: varName declareC: type , ' ' , varName
 ]
 
-{ #category : #public }
+{ #category : #'public - variable declaration' }
 RustCodeGenerator >> var: varName type: cType array: array [
 	"Use this in preference to #var:declareC: when possible. This produces a C
 	 statment of the form
@@ -5581,7 +5669,7 @@ RustCodeGenerator >> var: varName type: cType array: array [
 		declareC: (self arrayInitializerCalled: varName for: array sizeString: nil type: cType)
 ]
 
-{ #category : #public }
+{ #category : #'public - variable declaration' }
 RustCodeGenerator >> var: varName type: cType sizeString: sizeString array: array [
 	"Use this in preference to #var:declareC: when possible. This produces a C
 	 statment of the form

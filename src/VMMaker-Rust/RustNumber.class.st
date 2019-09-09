@@ -11,6 +11,13 @@ RustNumber >> asRustBaseType [
 	^ self
 ]
 
+{ #category : #converting }
+RustNumber >> asRustTypeGroup [
+	<return: #Symbol>
+
+	^ #number
+]
+
 { #category : #testing }
 RustNumber >> isSimple [
 	^ true

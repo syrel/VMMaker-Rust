@@ -17,8 +17,15 @@ RustUnknownType >> asRustBaseType [
 ]
 
 { #category : #converting }
+RustUnknownType >> asRustTypeGroup [
+	<return: #Symbol>
+
+	^ #unknown
+]
+
+{ #category : #converting }
 RustUnknownType >> asRustTypeName [
-	^ 'unknown'
+	^ 'unknown ({1})' format: { self value }
 ]
 
 { #category : #asserting }

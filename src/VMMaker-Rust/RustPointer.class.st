@@ -4,6 +4,13 @@ Class {
 	#category : #'VMMaker-Rust-Types'
 }
 
+{ #category : #converting }
+RustPointer >> asRustTypeGroup [
+	<return: #Symbol>
+
+	^ #pointer
+]
+
 { #category : #asserting }
 RustPointer >> assertValueType: anObject [
 	

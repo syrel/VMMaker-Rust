@@ -1,12 +1,80 @@
 Class {
 	#name : #RustSlangCodeClass,
 	#superclass : #VMClass,
+	#instVars : [
+		'question'
+	],
+	#classVars : [
+		'TheAnswer'
+	],
 	#category : #'VMMaker-Rust-Examples'
 }
 
-{ #category : #arithmetic }
+{ #category : #translation }
+RustSlangCodeClass class >> implicitReturnTypeFor: aSelector [
+	"Answer the return type for methods that don't have an explicit return."
+	^ RustUnknownType new
+]
+
+{ #category : #initialization }
+RustSlangCodeClass class >> initialize [
+	
+	TheAnswer := 42
+]
+
+{ #category : #'arithmetic - plus' }
+RustSlangCodeClass >> arithmetic_0_plus_0 [
+	^ 0 + 0
+]
+
+{ #category : #'arithmetic - multiply' }
+RustSlangCodeClass >> arithmetic_127_multiply_1 [
+	^ 127 * 1
+]
+
+{ #category : #'arithmetic - multiply' }
+RustSlangCodeClass >> arithmetic_127_multiply_127 [
+	^ 127 * 127
+]
+
+{ #category : #'arithmetic - plus' }
 RustSlangCodeClass >> arithmetic_127_plus_1 [
 	^ 127 + 1
+]
+
+{ #category : #'arithmetic - plus' }
+RustSlangCodeClass >> arithmetic_127_plus_127 [
+	^ 127 + 127
+]
+
+{ #category : #'arithmetic - minus' }
+RustSlangCodeClass >> arithmetic_128_minus_1 [
+	^ 128 - 1
+]
+
+{ #category : #'arithmetic - minus' }
+RustSlangCodeClass >> arithmetic_1_minus_1 [
+	^ 1 - 1
+]
+
+{ #category : #'arithmetic - minus' }
+RustSlangCodeClass >> arithmetic_negated128_minus_128 [
+	^ -128 - 128
+]
+
+{ #category : #conditionals }
+RustSlangCodeClass >> equal_ifTrue_return_10 [
+	^ 5 = 10 ifTrue: [ 10 ]
+]
+
+{ #category : #conditionals }
+RustSlangCodeClass >> ifFalse [
+	^ false ifFalse: [ false ]
+]
+
+{ #category : #conditionals }
+RustSlangCodeClass >> ifTrue [
+	^ true ifTrue: [ true ]
 ]
 
 { #category : #comparison }
@@ -69,9 +137,20 @@ RustSlangCodeClass >> returnZeroFloat [
 	^ 0.0
 ]
 
+{ #category : #return }
+RustSlangCodeClass >> returnsConstant [
+	^ 42
+]
+
 { #category : #self }
 RustSlangCodeClass >> selfTrueOrFalse [
 	^ self trueOrFalse
+]
+
+{ #category : #conditionals }
+RustSlangCodeClass >> self_trueAndFalse_ifTrue_return_10 [
+	^ self trueAndFalse
+		ifTrue: [ 10 ]
 ]
 
 { #category : #abs }
@@ -87,9 +166,4 @@ RustSlangCodeClass >> trueAndFalse [
 { #category : #boolean }
 RustSlangCodeClass >> trueOrFalse [
 	^ true or: [ false ]
-]
-
-{ #category : #arithmetic }
-RustSlangCodeClass >> zeroPlusZero [
-	^ 0 + 0
 ]

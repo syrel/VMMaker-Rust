@@ -19,6 +19,13 @@ RustString >> asRustLiteral [
 ]
 
 { #category : #converting }
+RustString >> asRustTypeGroup [
+	<return: #Symbol>
+
+	^ #string
+]
+
+{ #category : #converting }
 RustString >> asRustTypeName [
 	^ 'String'
 ]
@@ -33,4 +40,9 @@ RustString >> assertValueType: anObject [
 	self
 		assert: [ anObject isSymbol not ]
 		description: [ 'Must not be a symbol' ].
+]
+
+{ #category : #accessing }
+RustString >> sizeOf [
+	^ 8
 ]

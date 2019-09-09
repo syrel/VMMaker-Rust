@@ -39,6 +39,20 @@ RustTypedValue >> asRustLiteral [
 ]
 
 { #category : #converting }
+RustTypedValue >> asRustType [
+	<return: #RustTypedValue>
+
+	^ self
+]
+
+{ #category : #converting }
+RustTypedValue >> asRustTypeGroup [
+	<return: #Symbol>
+	
+	^ self subclassResponsibility
+]
+
+{ #category : #converting }
 RustTypedValue >> asRustTypeName [
 	"Return a string representing this Rust type"
 	<return: #String>
@@ -66,6 +80,11 @@ RustTypedValue >> hasValue [
 { #category : #comparing }
 RustTypedValue >> hash [
 	^ self class hash bitXor: self value hash
+]
+
+{ #category : #testing }
+RustTypedValue >> isOption [
+	^ false
 ]
 
 { #category : #testing }

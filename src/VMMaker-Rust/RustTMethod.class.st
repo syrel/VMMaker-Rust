@@ -74,19 +74,31 @@ RustTMethod >> addTypesFor: node to: typeSet in: aCodeGen [
 			[expr := expr variable].
 		 expr isStmtList ifTrue:
 			[expr := expr statements last]].
-	expr isSend ifTrue:
-		[(#(ifTrue: ifFalse: ifTrue:ifFalse: ifFalse:ifTrue:) includes: expr selector) ifTrue:
-			[^expr args
-				inject: false
-				into: [:asYetUntyped :block|
-					asYetUntyped | (self addTypesFor: block to: typeSet in: aCodeGen)]].
+	
+	expr isSend
+		ifTrue: [
+			"this is a special case. we should wrap result in Optional"
+			(#(ifTrue: ifFalse:) includes: expr selector)
+				ifTrue: [
+					| theConditionalTypes asYetUntyped |
+					theConditionalTypes := Set new.
+					asYetUntyped := (self addTypesFor: expr args first to: theConditionalTypes in: aCodeGen).
+					typeSet addAll: (theConditionalTypes collect: [ :eachType | RustOption value: eachType ]).
+					^ asYetUntyped ].
+
+			(#(ifTrue:ifFalse: ifFalse:ifTrue:) includes: expr selector)
+				ifTrue: [ ^ expr args
+					inject: false
+					into: [ :asYetUntyped :block | asYetUntyped | (self addTypesFor: block to: typeSet in: aCodeGen) ] ].
+
 		(aCodeGen returnTypeForSend: expr in: self ifNil: nil)
-			ifNil: [^(aCodeGen methodNamed: expr selector) notNil and: [expr selector ~~ selector]]
-			ifNotNil:
-				[:type |
+			ifNil: [ ^ (aCodeGen methodNamed: expr selector) notNil and: [ expr selector ~~ selector ] ]
+			ifNotNil: [ :type |
 				self assert: [ type isKindOf: RustTypedValue ].
 				typeSet add: type.
 				^false]].
+		
+
 	expr isVariable ifTrue:
 		[(aCodeGen typeOfVariable: expr name)
 			ifNotNil: [:type|
@@ -98,23 +110,18 @@ RustTMethod >> addTypesFor: node to: typeSet in: aCodeGen [
 				aType := (expr name = 'self'
 										ifTrue: [#void]
 										ifFalse: [#sqInt]).
-				self assert: [ aType isKindOf: RustTypedValue ].
-				(typeSet add: aType) == #sqInt ifTrue:
+				"self assert: [ aType isKindOf: RustTypedValue ]."
+				(typeSet add: aType).
+				aType == #sqInt ifTrue:
 					[^true]]].
-	expr isConstant ifTrue:
-		[(expr value isInteger and: [expr value >= 0]) "cannot determine if signed or unsigned yet..."
-			ifTrue: [
-				| aType |
-				
-				aType := expr value asRustType.
-				self assert: [ aType isKindOf: RustTypedValue ].
-				typeSet add: aType asRustType ]
-			ifFalse:
-				[(expr typeOrNilFrom: aCodeGen in: self) ifNotNil:
-					[:type |
-					self assert: [ type isKindOf: RustTypedValue ].
-					typeSet add: type]]].
-	^false
+
+	expr isConstant ifTrue: [
+		(expr typeOrNilFrom: aCodeGen in: self) ifNotNil: [ :aType |
+			self
+				assert: [ aType isKindOf: RustTypedValue ]
+				description: [ 'Must be a rust type' ].
+			typeSet add: aType ] ].
+	^ false
 ]
 
 { #category : #'inlining support' }
@@ -1171,7 +1178,10 @@ RustTMethod >> inferReturnTypeFromReturnsIn: aCodeGen [
 					{n. s}]]"
 	
 	aCodeGen maybeBreakForTestToInline: selector in: self.
-	returnType ifNotNil: [^self].
+
+	(returnType isNotNil and: [ returnType isUnknown not ])
+		ifTrue: [ ^self ].
+
 	aCodeGen
 		pushScope: declarations
 		while:
@@ -1199,20 +1209,21 @@ RustTMethod >> inferReturnTypeFromReturnsIn: aCodeGen [
 			returnTypes remove: #implicit ifAbsent: [].
 			returnTypes := aCodeGen harmonizeReturnTypesIn: returnTypes.
 			hasReturn
-				ifTrue:
-					[returnTypes size > 1 ifTrue:
-						[| message |
-						 message := String streamContents:
-										[:s|
-										 s nextPutAll: 'conflicting return types '.
-										 returnTypes
-											do: [:t| s nextPutAll: t]
-											separatedBy: [s nextPutAll: ', '].
-										 s nextPutAll: ' in '; nextPutAll: selector; cr].
-						 Notification signal: message.
-						 aCodeGen logger ensureCr; show: message].
+				ifTrue: [
+					(returnTypes size > 1)
+						ifTrue: [
+							| message |
+					 		message := String streamContents: [ :aStream |
+								aStream nextPutAll: 'conflicting return types '.
+								returnTypes
+									do: [ :eachType | aStream nextPutAll: eachType asRustTypeName ]
+									separatedBy: [ aStream nextPutAll: ', '].
+								aStream nextPutAll: ' in '; nextPutAll: selector; cr ].
+							self error: message.
+							aCodeGen logger ensureCr; show: message ].
+						
 					 returnTypes size = 1 ifTrue:
-						[self returnType: returnTypes anyOne]]
+						[ self returnType: returnTypes anyOne ] ]
 				ifFalse:
 					[self returnType: (aCodeGen implicitReturnTypeFor: selector)]]
 ]
@@ -1220,11 +1231,12 @@ RustTMethod >> inferReturnTypeFromReturnsIn: aCodeGen [
 { #category : #'type inference' }
 RustTMethod >> inferReturnTypeIn: aCodeGen [
 	"Attempt to infer the return type of the receiver and answer if it changed."
+	<return: #Boolean>
 	| existingReturnType |
 
 	existingReturnType := returnType.
 	self inferReturnTypeFromReturnsIn: aCodeGen.
-	^existingReturnType ~= returnType
+	^ existingReturnType ~= returnType
 ]
 
 { #category : #'type inference' }
@@ -2646,14 +2658,17 @@ RustTMethod >> returnType: aRustType [
 	"Set the type of the values returned by this method.
 	 This string will be used in the C declaration of this function.
 	 If the type exists as a symbol, use that."
-
+	| anActualType |
+	
+	anActualType := aRustType isString
+		ifTrue: [ RustUnknownType value: aRustType ]
+		ifFalse: [ aRustType ].
+	
 	self
-		assert: [ aRustType isKindOf: RustTypedValue ]
+		assert: [ anActualType isKindOf: RustTypedValue ]
 		description: [ 'Must be a rust type' ].
 
-	returnType := aRustType isSymbol
-					ifTrue: [aRustType]
-					ifFalse: [(Symbol findInterned: aRustType) ifNil: [aRustType]]
+	returnType := anActualType
 ]
 
 { #category : #testing }
