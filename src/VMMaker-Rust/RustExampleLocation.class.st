@@ -5,16 +5,23 @@ Class {
 		'latitude',
 		'longitude'
 	],
+	#classVars : [
+		'RADIUS'
+	],
 	#category : #'VMMaker-Rust-Examples - Cities'
 }
 
+{ #category : #initialization }
+RustExampleLocation class >> initialize [
+	RADIUS := 1000
+]
+
 { #category : #'as yet unclassified' }
-RustExampleLocation class >> rustInstanceVariableTypeOf: aVariableName [
-	aVariableName = #latitude
-		ifTrue: [ ^ RustInt32 new ].
-		
-	aVariableName = #longitude
-		ifTrue: [ ^ RustInt32 new ]
+RustExampleLocation class >> rustInstanceVariableDeclariation [
+	^ {
+		#latitude -> RustFloat64.
+		#longitude -> RustFloat64
+	}
 ]
 
 { #category : #accessing }
@@ -35,4 +42,14 @@ RustExampleLocation >> longitude [
 { #category : #accessing }
 RustExampleLocation >> longitude: anObject [
 	longitude := anObject
+]
+
+{ #category : #geometry }
+RustExampleLocation >> x [
+	^ RADIUS * self longitude * self latitude cos
+]
+
+{ #category : #geometry }
+RustExampleLocation >> y [
+	^ RADIUS * self latitude
 ]

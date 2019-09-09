@@ -31,7 +31,7 @@ RustInt64 >> largerType [
 	"Return a larger type of me if possible"
 	<return: #RustInteger>
 	
-	^ self
+	^ self class new
 ]
 
 { #category : #accessing }

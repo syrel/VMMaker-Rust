@@ -332,7 +332,7 @@ RustTStmtListNode >> renameLabelsForInliningInto: aTMethod [
 	labels := OrderedCollection new.
 	self nodesDo:
 		[:node| node isLabel ifTrue: [labels add: node label]].
-	RustTMethod new
+	RustMethod new
 		parseTree: self;
 		labels: labels;
 		renameLabelsForInliningInto: aTMethod

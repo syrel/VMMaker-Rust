@@ -36,7 +36,7 @@ RustVMPluginCodeGenerator >> accessorsAndAssignmentsForSubMethodNamed: selector 
 	(#(loadBitBltFrom: loadWarpBltFrom: loadBitBltFrom:warping:) includes: selector) ifTrue:
 		[(method isNil
 		  or: [method definingClass ~~ BitBltSimulation]) ifTrue:
-			[method := (BitBltSimulation >> selector) asTranslationMethodOfClass: RustTMethod]].
+			[method := (BitBltSimulation >> selector) asTranslationMethodOfClass: RustMethod]].
 	method ifNil:
 		[^nil].
 	map := Dictionary new.

@@ -168,19 +168,21 @@ RustTSendNode >> emitCCodeAsExpressionOn: aStream level: level generator: aCodeG
 { #category : #'C code generation' }
 RustTSendNode >> emitCCodeAsFieldReferenceOn: aStream level: level generator: aCodeGen [
 	"If appropriate, translate this message send as a pointer dereference"
-
 	| parenCount |
-	(aCodeGen isStructSend: self) ifFalse:
-		[^false].
 
-	parenCount := receiver isSend ifTrue: [2] ifFalse: [1].
+	false ifFalse: [ ^ false ].
+
+	parenCount := receiver isSend
+		ifTrue: [2]
+		ifFalse: [1].
+
 	aStream next: parenCount put: $(.
-	receiver  emitCCodeAsExpressionOn: aStream level: 0 generator: aCodeGen.
+
+	receiver emitCCodeAsExpressionOn: aStream level: 0 generator: aCodeGen.
 	parenCount > 1 ifTrue:
 		[aStream nextPut: $)].
-	(receiver structTargetKindIn: aCodeGen) caseOf: {
-		[#pointer] -> [aStream nextPut: $-; nextPut: $>].
-		[#struct] -> [aStream nextPut: $.] }.
+
+	aStream nextPut: $..
 	aStream nextPutAll: (aCodeGen cFunctionNameFor: selector).
 	arguments isEmpty ifFalse:
 		[self assert: arguments size = 1.
@@ -193,6 +195,7 @@ RustTSendNode >> emitCCodeAsFieldReferenceOn: aStream level: level generator: aC
 { #category : #'C code generation' }
 RustTSendNode >> emitCCodeAsFunctionCallOn: aStream level: level generator: aCodeGen [
 	"Translate this message send into a C function call"
+	| aReceiverType anExpectedType shouldCast |
 
 	selector == #break ifTrue:
 		[aStream nextPutAll: '/* send of break elided */'.
@@ -203,24 +206,31 @@ RustTSendNode >> emitCCodeAsFunctionCallOn: aStream level: level generator: aCod
 	(aCodeGen shouldGenerateAsInterpreterProxySend: self) ifTrue:
 		[(aCodeGen noteUsedPluginFunction: selector) ifTrue:
 			[aStream nextPutAll: 'interpreterProxy->']].
+	
+	aReceiverType := aCodeGen returnTypeForReceiver: self receiver.
+	anExpectedType := aCodeGen receiverTypeForSend: self.
+	
+	shouldCast := anExpectedType isUnknown not
+		and: [ (aReceiverType sameAs: anExpectedType) not ].
 
+	shouldCast
+		ifTrue: [ aStream nextPut: $( ].
+
+	receiver emitCCodeOn: aStream level: level generator: aCodeGen.
+
+	shouldCast
+		ifTrue: [
+			aStream nextPutAll: ' as '.
+			aStream nextPutAll: anExpectedType asRustTypeName.
+			aStream nextPut: $) ].
+
+	aStream nextPut: $..
 	aStream nextPutAll: (aCodeGen cFunctionNameFor: selector); nextPut: $(.
 
-	"Only include the receiver as the first argument in certain cases.
-	 The receiver is always included if it is an expression.
-	 If it is a variable:
-		 If the vmClass says it is an implicit variable, don't include it.
-		 If the variable is 'self' and the method being called is not in
-		 the method set (i.e. it is some external code), don't include it."
-	(self shouldExcludeReceiverAsFirstArgument: aCodeGen) ifFalse:
-		[(receiver structTargetKindIn: aCodeGen) == #struct ifTrue:
-			[aStream nextPut: $&].
-		 receiver emitCCodeOn: aStream level: level generator: aCodeGen.
-		 arguments isEmpty ifFalse:
-			[aStream nextPutAll: ', ']].
 	arguments
 		do: [ :arg| arg emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen]
-		separatedBy: [aStream nextPut: $,; space].
+		separatedBy: [ aStream nextPut: $,; space ].
+
 	aStream nextPut: $)
 ]
 

@@ -5,7 +5,22 @@ Class {
 }
 
 { #category : #arithmetic }
+RustUnknownType >> * anotherType [
+	^ RustUnknownType new
+]
+
+{ #category : #arithmetic }
 RustUnknownType >> + anotherType [
+	^ RustUnknownType new
+]
+
+{ #category : #arithmetic }
+RustUnknownType >> - anotherType [
+	^ RustUnknownType new
+]
+
+{ #category : #arithmetic }
+RustUnknownType >> / anotherType [
 	^ RustUnknownType new
 ]
 

@@ -4,6 +4,16 @@ Class {
 	#category : #'VMMaker-Rust-Types'
 }
 
+{ #category : #arithmetic }
+RustNone >> + anotherType [
+	^ self class new
+]
+
+{ #category : #arithmetic }
+RustNone >> - anotherType [
+	^ self class new
+]
+
 { #category : #converting }
 RustNone >> asRustLiteral [
 	^ 'None'

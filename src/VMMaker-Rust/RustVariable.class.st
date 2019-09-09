@@ -6,7 +6,7 @@ Class {
 		'name',
 		'type'
 	],
-	#category : #'VMMaker-Rust-Variables'
+	#category : #'VMMaker-Rust-Meta'
 }
 
 { #category : #accessing }
@@ -15,8 +15,13 @@ RustVariable >> name [
 ]
 
 { #category : #accessing }
-RustVariable >> name: anObject [
-	name := anObject
+RustVariable >> name: aName [
+
+	self
+		assert: [ aName isSymbol ]
+		description: [ 'Must be a symbol' ].
+
+	name := aName
 ]
 
 { #category : #accessing }

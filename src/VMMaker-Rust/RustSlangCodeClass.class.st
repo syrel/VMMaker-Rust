@@ -37,6 +37,11 @@ RustSlangCodeClass >> arithmetic_127_multiply_127 [
 	^ 127 * 127
 ]
 
+{ #category : #'arithmetic - multiply' }
+RustSlangCodeClass >> arithmetic_127_multiply_127f32 [
+	^ 127 * 127.0
+]
+
 { #category : #'arithmetic - plus' }
 RustSlangCodeClass >> arithmetic_127_plus_1 [
 	^ 127 + 1
@@ -47,9 +52,49 @@ RustSlangCodeClass >> arithmetic_127_plus_127 [
 	^ 127 + 127
 ]
 
+{ #category : #'arithmetic - plus' }
+RustSlangCodeClass >> arithmetic_127_plus_127f32 [
+	^ 127 + 127.0
+]
+
+{ #category : #'arithmetic - multiply' }
+RustSlangCodeClass >> arithmetic_127f32_multiply_127 [
+	^ 127.0 * 127
+]
+
+{ #category : #'arithmetic - multiply' }
+RustSlangCodeClass >> arithmetic_127f32_multiply_127f32 [
+	^ 127.0 * 127.0
+]
+
+{ #category : #'arithmetic - plus' }
+RustSlangCodeClass >> arithmetic_127f32_plus_127 [
+	^ 127.0 + 127
+]
+
+{ #category : #'arithmetic - plus' }
+RustSlangCodeClass >> arithmetic_127f32_plus_127f32 [
+	^ 127.0 + 127.0
+]
+
 { #category : #'arithmetic - minus' }
 RustSlangCodeClass >> arithmetic_128_minus_1 [
 	^ 128 - 1
+]
+
+{ #category : #'arithmetic - minus' }
+RustSlangCodeClass >> arithmetic_128_minus_1f32 [
+	^ 128 - 1.0
+]
+
+{ #category : #'arithmetic - minus' }
+RustSlangCodeClass >> arithmetic_128f32_minus_1 [
+	^ 128.0 - 1
+]
+
+{ #category : #'arithmetic - minus' }
+RustSlangCodeClass >> arithmetic_128f32_minus_1f32 [
+	^ 128.0 - 1.0
 ]
 
 { #category : #'arithmetic - minus' }

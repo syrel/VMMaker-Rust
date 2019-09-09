@@ -1,5 +1,5 @@
 Class {
-	#name : #RustTMethod,
+	#name : #RustMethod,
 	#superclass : #Object,
 	#instVars : [
 		'args',
@@ -23,35 +23,36 @@ Class {
 		'static',
 		'writtenToGlobalVarsCache',
 		'functionAttributes',
-		'usedVariablesCache'
+		'usedVariablesCache',
+		'structure'
 	],
 	#classVars : [
 		'CaseStatements'
 	],
-	#category : #'VMMaker-Rust'
+	#category : #'VMMaker-Rust-Meta'
 }
 
 { #category : #'class initialization' }
-RustTMethod class >> initialize [
+RustMethod class >> initialize [
 	"TMethod initialize"	
 	CaseStatements := IdentitySet new: 10.
 	CaseStatements addAll: #(dispatchOn:in: dispatchOn:in:with: dispatchOn:in:with:with:).
 ]
 
 { #category : #accessing }
-RustTMethod >> addFunctionAttribute: aString [
+RustMethod >> addFunctionAttribute: aString [
 	functionAttributes := functionAttributes
 							ifNil: [aString]
 							ifNotNil: [functionAttributes, ' ', aString]
 ]
 
 { #category : #accessing }
-RustTMethod >> addLabelsTo: aTMethod [
+RustMethod >> addLabelsTo: aTMethod [
 	aTMethod labels addAll: labels
 ]
 
 { #category : #initialization }
-RustTMethod >> addTypeForSelf [
+RustMethod >> addTypeForSelf [
 	"If self should be typed then add a suitable type declaration.
 	 Preserve the flagging of an implicit self using the #implicit symbol as the fake type."
 	self typeForSelf ifNotNil:
@@ -63,7 +64,7 @@ RustTMethod >> addTypeForSelf [
 ]
 
 { #category : #'type inference' }
-RustTMethod >> addTypesFor: node to: typeSet in: aCodeGen [
+RustMethod >> addTypesFor: node to: typeSet in: aCodeGen [
 	"Add the value types for the node to typeSet.
 	 Answer if any type was derived from an as-yet-untyped method or variable, which allows us to abort
 	 inferReturnTypeFromReturnsIn: if the return type depends on a yet-to-be-typed method or variable."
@@ -94,13 +95,12 @@ RustTMethod >> addTypesFor: node to: typeSet in: aCodeGen [
 		(aCodeGen returnTypeForSend: expr in: self ifNil: nil)
 			ifNil: [ ^ (aCodeGen methodNamed: expr selector) notNil and: [ expr selector ~~ selector ] ]
 			ifNotNil: [ :type |
-				self assert: [ type isKindOf: RustTypedValue ].
-				typeSet add: type.
+				typeSet add: type asRustType.
 				^false]].
 		
 
 	expr isVariable ifTrue:
-		[(aCodeGen typeOfVariable: expr name)
+		[(aCodeGen typeOfVariable: expr name in: self)
 			ifNotNil: [:type|
 				self assert: [ type isKindOf: RustTypedValue ].
 				typeSet add: type]
@@ -125,7 +125,7 @@ RustTMethod >> addTypesFor: node to: typeSet in: aCodeGen [
 ]
 
 { #category : #'inlining support' }
-RustTMethod >> addVarsDeclarationsAndLabelsOf: methodToBeInlined except: doNotRename [
+RustMethod >> addVarsDeclarationsAndLabelsOf: methodToBeInlined except: doNotRename [
 	"Prepare to inline the body of the given method into the receiver by making the args and locals of the argument to the receiver be locals of the receiver. Record any type declarations for these variables. Record labels. Assumes that the variables have already be renamed to avoid name clashes."
 
 	locals
@@ -140,14 +140,14 @@ RustTMethod >> addVarsDeclarationsAndLabelsOf: methodToBeInlined except: doNotRe
 ]
 
 { #category : #utilities }
-RustTMethod >> allCalls [
+RustMethod >> allCalls [
 	"Answer a collection of selectors for the messages sent by this method."
 
 	^parseTree allCalls
 ]
 
 { #category : #accessing }
-RustTMethod >> allLocals [
+RustMethod >> allLocals [
 	"The merge of locals and declarations (don't ask)"
 
 	^(declarations keys asSet reject: [:k| (declarations at: k) == #implicit])
@@ -155,7 +155,7 @@ RustTMethod >> allLocals [
 ]
 
 { #category : #accessing }
-RustTMethod >> allReferencedVariablesUsing: aCodeGen [
+RustMethod >> allReferencedVariablesUsing: aCodeGen [
 	"Answer the set of all variables referenced in the receiver."
 	| refs |
 	refs := Set new.
@@ -178,7 +178,7 @@ RustTMethod >> allReferencedVariablesUsing: aCodeGen [
 ]
 
 { #category : #inlining }
-RustTMethod >> argAssignmentsFor: meth send: aSendNode except: elidedArgs in: aCodeGen [
+RustMethod >> argAssignmentsFor: meth send: aSendNode except: elidedArgs in: aCodeGen [
 	"Return a collection of assignment nodes that assign the given argument expressions to the formal parameter variables of the given method."
 	"Optimization: If the actual parameters are either constants or local variables in the target method (the receiver), substitute them directly into the body of meth. Note that global variables cannot be subsituted because the inlined method might depend on the exact ordering of side effects to the globals."
 
@@ -217,7 +217,7 @@ RustTMethod >> argAssignmentsFor: meth send: aSendNode except: elidedArgs in: aC
 ]
 
 { #category : #'primitive compilation' }
-RustTMethod >> argConversionExprFor: varName stackIndex: stackIndex [ 
+RustMethod >> argConversionExprFor: varName stackIndex: stackIndex [ 
 	"Return the parse tree for an expression that fetches and converts the 
 	primitive argument at the given stack offset."
 	| exprList decl type stmtList |
@@ -247,31 +247,31 @@ RustTMethod >> argConversionExprFor: varName stackIndex: stackIndex [
 ]
 
 { #category : #accessing }
-RustTMethod >> args [
+RustMethod >> args [
 	"The arguments of this method."
 
 	^args
 ]
 
 { #category : #converting }
-RustTMethod >> asInlineNode [
+RustMethod >> asInlineNode [
 	^RustTInlineNode new method: self
 ]
 
 { #category : #transformations }
-RustTMethod >> bindClassVariablesIn: constantDictionary [
+RustMethod >> bindClassVariablesIn: constantDictionary [
 	"Class variables are used as constants. This method replaces all references to class variables in the body of this method with the corresponding constant looked up in the class pool dictionary of the source class. The source class class variables should be initialized before this method is called."
 
 	parseTree := parseTree bindVariablesIn: constantDictionary.
 ]
 
 { #category : #transformations }
-RustTMethod >> bindVariableUsesIn: aDictionary [
+RustMethod >> bindVariableUsesIn: aDictionary [
 	parseTree := parseTree bindVariableUsesIn: aDictionary.
 ]
 
 { #category : #transformations }
-RustTMethod >> bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in: codeGen [
+RustMethod >> bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in: codeGen [
 	"Answer either the receiver, if it contains no references to the given variables, or a new node with the given variables rebound."
 	| newParseTree |
 	newParseTree := parseTree bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in: codeGen.
@@ -283,7 +283,7 @@ RustTMethod >> bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold i
 ]
 
 { #category : #transformations }
-RustTMethod >> buildCaseStmt: aSendNode in: aCodeGen [
+RustMethod >> buildCaseStmt: aSendNode in: aCodeGen [
 	"Build a case statement node for the given send of dispatchOn:in:."
 	"Note: the first argument is the variable to be dispatched on. The second argument is a constant node holding an array of unary selectors, which will be turned into sends to self."
 
@@ -309,7 +309,7 @@ RustTMethod >> buildCaseStmt: aSendNode in: aCodeGen [
 ]
 
 { #category : #transformations }
-RustTMethod >> buildSwitchStmt: aSendNode parent: parentNode [
+RustMethod >> buildSwitchStmt: aSendNode parent: parentNode [
 	"Build a switch statement node for the given send of caseOf: or caseOf:otherwise:."
 	| switch |
 	switch := RustTSwitchStmtNode new
@@ -322,7 +322,7 @@ RustTMethod >> buildSwitchStmt: aSendNode parent: parentNode [
 ]
 
 { #category : #'inlining support' }
-RustTMethod >> checkForCompletenessIn: aCodeGen [
+RustMethod >> checkForCompletenessIn: aCodeGen [
 	"Set the complete flag if the parse tree contains no further candidates for inlining."
 	| foundIncompleteSend incompleteSends |
 	aCodeGen maybeBreakForTestOfInliningOf: selector.
@@ -353,7 +353,7 @@ RustTMethod >> checkForCompletenessIn: aCodeGen [
 ]
 
 { #category : #testing }
-RustTMethod >> checkForRequiredInlinability [
+RustMethod >> checkForRequiredInlinability [
 	"This is used in methods answering inlinability.
 	 Always answer false.  But if the receiver is marked as something that must be inlined (inline == #always) raise an error."
 	(inline == #always and: [complete]) ifTrue:
@@ -362,7 +362,7 @@ RustTMethod >> checkForRequiredInlinability [
 ]
 
 { #category : #'primitive compilation' }
-RustTMethod >> checkSuccessExpr [
+RustMethod >> checkSuccessExpr [
 	"Answer the parse tree for an expression that aborts the primitive if there has been a failure."
 	^self
 		statementsFor: 'interpreterProxy failed ifTrue: [^nil]'
@@ -370,7 +370,7 @@ RustTMethod >> checkSuccessExpr [
 ]
 
 { #category : #accessing }
-RustTMethod >> checkedDeclarationAt: aVariableName put: aDeclaration in: aCCodeGen [
+RustMethod >> checkedDeclarationAt: aVariableName put: aDeclaration in: aCCodeGen [
 	((args includes: aVariableName)
 	 or: [(locals includes: aVariableName)
 	 or: [(definingClass instVarIndexFor: aVariableName asString ifAbsent: nil) notNil
@@ -384,23 +384,23 @@ RustTMethod >> checkedDeclarationAt: aVariableName put: aDeclaration in: aCCodeG
 ]
 
 { #category : #accessing }
-RustTMethod >> clearReferencesToGlobalStruct [
+RustMethod >> clearReferencesToGlobalStruct [
 	globalStructureBuildMethodHasFoo := false
 ]
 
 { #category : #accessing }
-RustTMethod >> comment [
+RustMethod >> comment [
 	^comment
 ]
 
 { #category : #accessing }
-RustTMethod >> comment: aComment [
+RustMethod >> comment: aComment [
 
 	comment := aComment 
 ]
 
 { #category : #accessing }
-RustTMethod >> compileTimeOptionPragmas [
+RustMethod >> compileTimeOptionPragmas [
 	"Answer the (possibly empty) sequence of option: or notOption: pragmas
 	 whose arguments are values to be defined at compile time."
 	^self compiledMethod pragmas select:
@@ -410,14 +410,14 @@ RustTMethod >> compileTimeOptionPragmas [
 ]
 
 { #category : #accessing }
-RustTMethod >> compiledMethod [
+RustMethod >> compiledMethod [
 	^definingClass
 		compiledMethodAt: selector
 		ifAbsent: [definingClass compiledMethodAt: properties selector]
 ]
 
 { #category : #'inlining support' }
-RustTMethod >> computePossibleSideEffectsInto: writtenToVars visited: visitedSelectors in: aCodeGen [
+RustMethod >> computePossibleSideEffectsInto: writtenToVars visited: visitedSelectors in: aCodeGen [
 	"Add all variables written to by this method and its callees to writtenToVars.
 	 Avoid circularity via visitedSelectors"
 
@@ -446,52 +446,52 @@ RustTMethod >> computePossibleSideEffectsInto: writtenToVars visited: visitedSel
 ]
 
 { #category : #accessing }
-RustTMethod >> declarationAt: aVariableName [
+RustMethod >> declarationAt: aVariableName [
 	^declarations at: aVariableName ifAbsent: [#sqInt, ' ', aVariableName]
 ]
 
 { #category : #accessing }
-RustTMethod >> declarationAt: aVariableName ifAbsent: absentBlock [
+RustMethod >> declarationAt: aVariableName ifAbsent: absentBlock [
 	^declarations at: aVariableName ifAbsent: absentBlock
 ]
 
 { #category : #accessing }
-RustTMethod >> declarationAt: aVariableName  "<String>" put: aDeclaration [ "<String>" "^aDeclaration"
+RustMethod >> declarationAt: aVariableName  "<String>" put: aDeclaration [ "<String>" "^aDeclaration"
 	^declarations at: aVariableName put: aDeclaration
 ]
 
 { #category : #accessing }
-RustTMethod >> declarations [
+RustMethod >> declarations [
 	"The type declaration dictionary of this method."
 
 	^declarations
 ]
 
 { #category : #testing }
-RustTMethod >> definedAsMacro [
+RustMethod >> definedAsMacro [
 	^properties notNil
 	  and: [(properties includesKey: #cmacro:)
 		or: [properties includesKey: #cmacro]]
 ]
 
 { #category : #accessing }
-RustTMethod >> definingClass [
+RustMethod >> definingClass [
 	^definingClass
 ]
 
 { #category : #accessing }
-RustTMethod >> definingClass: aClass [
+RustMethod >> definingClass: aClass [
 	definingClass := aClass.
 ]
 
 { #category : #'error handling' }
-RustTMethod >> deny: aBooleanOrBlock [
+RustMethod >> deny: aBooleanOrBlock [
 	<doNotGenerate>
 	aBooleanOrBlock value ifTrue: [AssertionFailure signal: 'Assertion failed']
 ]
 
 { #category : #'C code generation' }
-RustTMethod >> determineTypeFor: aNode in: aCodeGen [
+RustMethod >> determineTypeFor: aNode in: aCodeGen [
 	aNode isSend ifTrue:
 		[^aCodeGen returnTypeForSend: aNode in: self ifNil: #sqInt].
 	aNode isAssignment ifTrue:
@@ -500,7 +500,7 @@ RustTMethod >> determineTypeFor: aNode in: aCodeGen [
 ]
 
 { #category : #transformations }
-RustTMethod >> elideAnyFinalReturn [
+RustMethod >> elideAnyFinalReturn [
 	"For super expansions we need to eliminate any final return to prevent premature exit.
 	 Anything meaningful in the returned expression must be retained."
 
@@ -515,7 +515,7 @@ RustTMethod >> elideAnyFinalReturn [
 ]
 
 { #category : #'C code generation' }
-RustTMethod >> emitCCodeOn: aStream generator: aCodeGenerator [
+RustMethod >> emitCCodeOn: aStream generator: aCodeGenerator [
 	"Emit Rust code for this method onto the given stream.
 	 All calls to inlined methods should already have been expanded."
 	| bodyStream conditional |
@@ -548,7 +548,7 @@ RustTMethod >> emitCCodeOn: aStream generator: aCodeGenerator [
 ]
 
 { #category : #'C code generation' }
-RustTMethod >> emitCCommentOn: aStream [
+RustMethod >> emitCCommentOn: aStream [
 	"Emit the transferred Smalltalk comments as C comments."
 
 	comment ifNotNil: [
@@ -567,7 +567,7 @@ RustTMethod >> emitCCommentOn: aStream [
 ]
 
 { #category : #'C code generation' }
-RustTMethod >> emitCFunctionPrototype: aStream generator: aCodeGen [
+RustMethod >> emitCFunctionPrototype: aStream generator: aCodeGen [
 	"Emit a C function header for this method onto the given stream."
 
 	properties ifNotNil:
@@ -582,7 +582,7 @@ RustTMethod >> emitCFunctionPrototype: aStream generator: aCodeGen [
 ]
 
 { #category : #'C code generation' }
-RustTMethod >> emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: isPrototype [
+RustMethod >> emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: isPrototype [
 	"Emit a C function header for this method onto the given stream.
 	 Answer if the method has any compileTimeOptionPragmas"
 	| compileTimeOptionPragmas returnTypeIsFunctionPointer |
@@ -638,7 +638,7 @@ RustTMethod >> emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: 
 ]
 
 { #category : #'C code generation' }
-RustTMethod >> emitCLocalsOn: aStream generator: aCodeGen [
+RustMethod >> emitCLocalsOn: aStream generator: aCodeGen [
 	"Emit a C function header for this method onto the given stream."
 
 	| volatileVariables maybeExternFunctions |
@@ -669,8 +669,120 @@ RustTMethod >> emitCLocalsOn: aStream generator: aCodeGen [
 		 aStream cr]
 ]
 
+{ #category : #'api - code generation' }
+RustMethod >> emitCodeOn: aStream level: aLevel generator: aCodeGenerator [
+	"Emit Rust code for this method onto the given stream.
+	 All calls to inlined methods should already have been expanded."
+	| bodyStream conditional |
+
+	aCodeGenerator currentMethod: self.
+	usedVariablesCache := Set new.
+	
+	"place method comment and method name before function."
+	self emitCommentOn: aStream level: aLevel.
+	aStream tab: aLevel; nextPutAll: '/* '; nextPutAll: self definingClass name; nextPutAll: '>>#'; nextPutAll: self smalltalkSelector; nextPutAll: ' */'.	
+	aStream cr.
+
+	conditional := self emitFunctionPrototype: aStream level: aLevel generator: aCodeGenerator isPrototype: false.
+	aStream space; nextPut: ${.
+	
+	bodyStream := ReadWriteStream on: (ByteString new: 128).
+	aCodeGenerator "Generation will note used variables in usedVariablesCache"
+		pushScope: declarations
+		while: [ parseTree emitCCodeOn: bodyStream level: aLevel + 1 generator: aCodeGenerator ].
+
+	self emitCLocalsOn: aStream generator: aCodeGenerator.
+	usedVariablesCache := nil.
+	aStream nextPutAll: bodyStream contents.
+
+	(returnType = #void or: [parseTree endsWithReturn]) ifFalse:
+		[aStream tab: aLevel + 1; nextPutAll: 'return 0;'; cr].
+	aStream tab: aLevel; nextPut: $}.
+
+	conditional ifTrue:
+		[self terminateConditionalDefineFor: self compileTimeOptionPragmas on: aStream]
+]
+
+{ #category : #'api - code generation' }
+RustMethod >> emitCommentOn: aStream level: aLevel [
+	"Emit the transferred Smalltalk comments as Rust comments."
+
+	comment ifNotNil: [
+		aStream cr;cr.
+		1 to: comment size do: [:index | | startPos |
+			aStream tab: aLevel; nextPutAll: '/*'; tab.
+			startPos := aStream position.
+			self printSingleComment: (comment at: index)
+				on: aStream
+				indent: aLevel + 1
+				tabWidth: 4
+				lineBreak: 78.
+			aStream position - startPos > (comment at: index) size ifTrue: "probably a multi-line comment"
+				[aStream cr].
+			aStream tab: aLevel; nextPutAll: ' */'; cr]]
+]
+
+{ #category : #'api - code generation' }
+RustMethod >> emitFunctionPrototype: aStream level: aLevel generator: aCodeGen isPrototype: isPrototype [
+	"Emit a C function header for this method onto the given stream.
+	 Answer if the method has any compileTimeOptionPragmas"
+	| compileTimeOptionPragmas returnTypeIsFunctionPointer |
+	<return: #Boolean>
+	
+	(compileTimeOptionPragmas := self compileTimeOptionPragmas)
+		ifNotEmpty: [ self outputConditionalDefineFor: compileTimeOptionPragmas on: aStream ].
+	
+	returnTypeIsFunctionPointer := returnType isPointer.
+
+	export 
+		ifTrue: [ aStream nextPutAll: 'EXPORT('; nextPutAll: returnType; nextPut: $) ]
+		ifFalse: [
+			self isStatic
+				ifTrue: [aStream tab: aLevel; nextPutAll: 'pub ']
+				ifFalse: [ isPrototype ifTrue: [ aStream nextPutAll: 'extern ' ] ].
+
+			isPrototype ifFalse: [
+				inline = #always
+					ifTrue: [ aStream nextPutAll: '#[inline(always)]'; cr ].
+				inline = #never
+					ifTrue: [ aStream nextPutAll: '#[inline(never)]'; cr ] ] ].
+	
+	aStream
+		nextPutAll: 'fn ';
+		nextPutAll: (aCodeGen cFunctionNameFor: selector);
+		nextPut: $(.
+		
+	self isInstanceSide ifTrue: [
+		aStream nextPutAll: '&self'.
+		args ifNotEmpty: [ aStream nextPutAll: ', ' ]. ].
+	
+	args isEmpty
+		ifFalse: [
+			args
+				do: [ :eachArgument | aStream nextPutAll: (self declarationAt: eachArgument) ]
+				separatedBy: [ aStream nextPutAll: ', '] ].
+
+	aStream nextPut: $).
+	
+	aStream
+		nextPutAll: ' -> ';
+		nextPutAll: returnType asRustTypeName.
+
+	(functionAttributes isNil or: [returnTypeIsFunctionPointer]) ifFalse:
+		[aStream space; nextPutAll: functionAttributes].
+	isPrototype ifTrue: [aStream space] ifFalse: [].
+	returnTypeIsFunctionPointer ifFalse: [ ].
+
+	isPrototype ifTrue:
+		[aStream nextPut: $;; cr.
+		 compileTimeOptionPragmas isEmpty ifFalse:
+			[aCodeGen maybeEmitPrimitiveFailureDefineFor: selector on: aStream.
+			 self terminateConditionalDefineFor: compileTimeOptionPragmas on: aStream]].
+	^compileTimeOptionPragmas notEmpty
+]
+
 { #category : #'C code generation' }
-RustTMethod >> emitInlineOn: aStream level: level generator: aCodeGen [
+RustMethod >> emitInlineOn: aStream level: level generator: aCodeGen [
 	"Emit C code for this method onto the given stream. All calls to inlined methods should already have been expanded."
 	self removeUnusedTempsAndNilIfRequiredIn: aCodeGen.
 	sharedLabel ifNotNil:
@@ -697,7 +809,7 @@ RustTMethod >> emitInlineOn: aStream level: level generator: aCodeGen [
 ]
 
 { #category : #'C code generation' }
-RustTMethod >> emitProxyFunctionPrototype: aStream generator: aCodeGen [
+RustMethod >> emitProxyFunctionPrototype: aStream generator: aCodeGen [
 	"Emit an indirect C function header for this method onto the given stream."
 
 	aStream
@@ -716,14 +828,14 @@ RustTMethod >> emitProxyFunctionPrototype: aStream generator: aCodeGen [
 ]
 
 { #category : #testing }
-RustTMethod >> endsWithReturn [
+RustMethod >> endsWithReturn [
 	"Answer true if the last statement of this method is a return."
 
 	^parseTree endsWithReturn
 ]
 
 { #category : #inlining }
-RustTMethod >> ensureConditionalAssignmentsAreTransformedIn: aCodeGen [
+RustMethod >> ensureConditionalAssignmentsAreTransformedIn: aCodeGen [
 	"Make passes transforming
 		foo := expr ifTrue: [a] ifFalse: [b]
 	 into
@@ -750,7 +862,7 @@ RustTMethod >> ensureConditionalAssignmentsAreTransformedIn: aCodeGen [
 ]
 
 { #category : #transformations }
-RustTMethod >> ensureToByDoLoopLimitIsSafeAndEfficient: node in: aCodeGen [
+RustMethod >> ensureToByDoLoopLimitIsSafeAndEfficient: node in: aCodeGen [
 	"For both safety and efficiency, make sure that to:[by:]do: loops
 	 with complex limits have a variable to hold the limit expression.
 	 In C the limit expression is evaluated each time round the loop
@@ -779,7 +891,7 @@ RustTMethod >> ensureToByDoLoopLimitIsSafeAndEfficient: node in: aCodeGen [
 ]
 
 { #category : #inlining }
-RustTMethod >> exitVar: exitVar label: exitLabel [
+RustMethod >> exitVar: exitVar label: exitLabel [
 	"Replace each return statement in this method with an assignment to the
 	 exit variable followed by either a return or a goto to the given label.
 	 Answer if a goto was generated."
@@ -851,19 +963,19 @@ RustTMethod >> exitVar: exitVar label: exitLabel [
 ]
 
 { #category : #accessing }
-RustTMethod >> export [
+RustMethod >> export [
 
 	^ export
 
 ]
 
 { #category : #accessing }
-RustTMethod >> export: aBoolean [
+RustMethod >> export: aBoolean [
 	export := aBoolean
 ]
 
 { #category : #initialization }
-RustTMethod >> extraVariableName: root [
+RustMethod >> extraVariableName: root [
 	extraVariableNumber := extraVariableNumber
 								ifNil: [0]
 								ifNotNil: [extraVariableNumber + 1].
@@ -871,12 +983,12 @@ RustTMethod >> extraVariableName: root [
 ]
 
 { #category : #transformations }
-RustTMethod >> extraVariableNumber [
+RustMethod >> extraVariableNumber [
 	^extraVariableNumber
 ]
 
 { #category : #transformations }
-RustTMethod >> extractDirective: theSelector valueBlock: aBlock default: defaultResult [
+RustMethod >> extractDirective: theSelector valueBlock: aBlock default: defaultResult [
 	"Find a pragma of the form:
 
 		<theSelector[args]>
@@ -918,7 +1030,7 @@ RustTMethod >> extractDirective: theSelector valueBlock: aBlock default: default
 ]
 
 { #category : #transformations }
-RustTMethod >> extractExpandCaseDirective [
+RustMethod >> extractExpandCaseDirective [
 	"Scan the top-level statements for an inlining directive of the form:
 		self expandCases
 	 and remove the directive from the method body. Answer whether
@@ -931,7 +1043,7 @@ RustTMethod >> extractExpandCaseDirective [
 ]
 
 { #category : #transformations }
-RustTMethod >> extractExportDirective [
+RustMethod >> extractExportDirective [
 	"Scan the top-level statements for an inlining directive of the form:
 
 		self export: <boolean>
@@ -946,7 +1058,7 @@ RustTMethod >> extractExportDirective [
 ]
 
 { #category : #'inlining support' }
-RustTMethod >> extractInlineDirective [
+RustMethod >> extractInlineDirective [
 	"Scan the pragmas (or top-level statements) for an inlining directive of the form:
 
 		<inline: <boolean|#never|#dontCare|#asSpecified|#always>
@@ -962,7 +1074,7 @@ RustTMethod >> extractInlineDirective [
 ]
 
 { #category : #transformations }
-RustTMethod >> extractSharedCase [
+RustMethod >> extractSharedCase [
 	"Scan the pragmas for an shared case directive of the form:
 		<sharedCodeNamed: 'sharedLabel' inCase: 'sharedCase'.>
 		<sharedCodeInCase: 'sharedCase'.>
@@ -988,7 +1100,7 @@ RustTMethod >> extractSharedCase [
 ]
 
 { #category : #transformations }
-RustTMethod >> extractStaticDirective [
+RustMethod >> extractStaticDirective [
 	"Scan the top-level statements for an inlining directive of the form:
 
 		self static: <boolean>
@@ -1003,7 +1115,7 @@ RustTMethod >> extractStaticDirective [
 ]
 
 { #category : #'primitive compilation' }
-RustTMethod >> fetchRcvrExpr [
+RustMethod >> fetchRcvrExpr [
 	"Return the parse tree for an expression that fetches the receiver from the stack."
 
 	| expr |
@@ -1013,7 +1125,7 @@ RustTMethod >> fetchRcvrExpr [
 ]
 
 { #category : #utilities }
-RustTMethod >> findReadBeforeAssignedIn: variables in: aCodeGen [
+RustMethod >> findReadBeforeAssignedIn: variables in: aCodeGen [
 	| readBeforeAssigned |
 	readBeforeAssigned := Set new.
 	parseTree
@@ -1025,7 +1137,7 @@ RustTMethod >> findReadBeforeAssignedIn: variables in: aCodeGen [
 ]
 
 { #category : #'primitive compilation' }
-RustTMethod >> fixUpReturns: argCount postlog: postlog [
+RustMethod >> fixUpReturns: argCount postlog: postlog [
 	"Replace each return statement in this method with (a) the given postlog, (b) code to pop the receiver and the given number of arguments, and (c) code to push the integer result and return."
 
 	| newStmts |
@@ -1057,7 +1169,7 @@ RustTMethod >> fixUpReturns: argCount postlog: postlog [
 ]
 
 { #category : #utilities }
-RustTMethod >> freeVariableReferences [
+RustMethod >> freeVariableReferences [
 	"Answer a collection of variables referenced this method, excluding locals, arguments, and pseudovariables."
 
 	| refs |
@@ -1072,17 +1184,17 @@ RustTMethod >> freeVariableReferences [
 ]
 
 { #category : #accessing }
-RustTMethod >> functionAttributes [
+RustMethod >> functionAttributes [
 	^functionAttributes
 ]
 
 { #category : #accessing }
-RustTMethod >> functionAttributes: aString [
+RustMethod >> functionAttributes: aString [
 	functionAttributes := aString
 ]
 
 { #category : #'type inference' }
-RustTMethod >> harmonizeSignedAndUnsignedTypesIn: aSetOfTypes [
+RustMethod >> harmonizeSignedAndUnsignedTypesIn: aSetOfTypes [
 	"Eliminate signed/unsigned conflicts in aSetOfTypes"
 	| sqs usqs |
 	#(char short int #'unsigned char' #'unsigned short' #'unsigned int')
@@ -1099,8 +1211,26 @@ RustTMethod >> harmonizeSignedAndUnsignedTypesIn: aSetOfTypes [
 		ifFalse: [aSetOfTypes]
 ]
 
+{ #category : #'api - testing' }
+RustMethod >> hasConstantNamed: aName [
+	self
+		assert: [ aName isSymbol ]
+		description: [ 'Must be a symbol' ].
+		
+	^ definingClass hasClassVarNamed: aName
+]
+
+{ #category : #'api - testing' }
+RustMethod >> hasInstanceVariableNamed: aName [
+	self
+		assert: [ aName isSymbol ]
+		description: [ 'Must be a symbol' ].
+
+	^ definingClass hasInstVarNamed: aName
+]
+
 { #category : #utilities }
-RustTMethod >> hasMoreSendsThan: nSends [
+RustMethod >> hasMoreSendsThan: nSends [
 	"Answer the number of nodes in this method's parseTree (a rough measure of its size)."
 
 	| cnt |
@@ -1114,12 +1244,12 @@ RustTMethod >> hasMoreSendsThan: nSends [
 ]
 
 { #category : #testing }
-RustTMethod >> hasProperties [
+RustMethod >> hasProperties [
 	^properties notNil and: [properties notEmpty]
 ]
 
 { #category : #testing }
-RustTMethod >> hasReturn [
+RustMethod >> hasReturn [
 	"Answer true if this method contains a return statement."
 
 	parseTree nodesDo: [ :n | n isReturn ifTrue: [ ^ true ]].
@@ -1127,7 +1257,7 @@ RustTMethod >> hasReturn [
 ]
 
 { #category : #utilities }
-RustTMethod >> hasUnrenamableCCode [
+RustMethod >> hasUnrenamableCCode [
 	"Answer true if the receiver uses inlined C which
 	 is not currently renamed properly by the the inliner."
 
@@ -1136,7 +1266,7 @@ RustTMethod >> hasUnrenamableCCode [
 ]
 
 { #category : #'inlining support' }
-RustTMethod >> incompleteSendsIn: aCodeGen [
+RustMethod >> incompleteSendsIn: aCodeGen [
 	"Debugging support; answer the incomplete and inlineable sends in the receiver."
 	| incompleteSends inlineableSends |
 	aCodeGen maybeBreakForTestOfInliningOf: selector.
@@ -1164,7 +1294,7 @@ RustTMethod >> incompleteSendsIn: aCodeGen [
 ]
 
 { #category : #'type inference' }
-RustTMethod >> inferReturnTypeFromReturnsIn: aCodeGen [
+RustMethod >> inferReturnTypeFromReturnsIn: aCodeGen [
 	"Attempt to infer the return type of the receiver from returns in the parse tree."
 
 	"this for determining which returns have which return types:"
@@ -1229,7 +1359,7 @@ RustTMethod >> inferReturnTypeFromReturnsIn: aCodeGen [
 ]
 
 { #category : #'type inference' }
-RustTMethod >> inferReturnTypeIn: aCodeGen [
+RustMethod >> inferReturnTypeIn: aCodeGen [
 	"Attempt to infer the return type of the receiver and answer if it changed."
 	<return: #Boolean>
 	| existingReturnType |
@@ -1240,7 +1370,7 @@ RustTMethod >> inferReturnTypeIn: aCodeGen [
 ]
 
 { #category : #'type inference' }
-RustTMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
+RustMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 	"infer types for untyped variables from assignments and arithmetic uses.
 	 For debugging answer a Dictionary from var to the nodes that determined types
 	 This for debugging:
@@ -1281,7 +1411,7 @@ RustTMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 				ifNotNil: "Merge simple types (but *don't* merge untyped vars); complex types must be defined by the programmer."
 					[(aCodeGen isSimpleType: type) ifTrue:
 						[(asYetUntyped includes: var)
-							ifTrue: [newDeclarations at: var put: type, ' ', var. asYetUntyped remove: var]
+							ifTrue: [newDeclarations at: var put: type. asYetUntyped remove: var]
 							ifFalse:
 								[aCodeGen mergeTypeOf: var in: newDeclarations with: type method: self].
 						 effectiveNodes at: var put: { newDeclarations at: var. node }, (effectiveNodes at: var ifAbsent: [#()])]]]].
@@ -1298,17 +1428,17 @@ RustTMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 ]
 
 { #category : #accessing }
-RustTMethod >> inline [
+RustMethod >> inline [
 	^inline
 ]
 
 { #category : #accessing }
-RustTMethod >> inline: aBoolean [
+RustMethod >> inline: aBoolean [
 	inline := aBoolean
 ]
 
 { #category : #inlining }
-RustTMethod >> inlineBuiltin: aSendNode in: aCodeGen [
+RustMethod >> inlineBuiltin: aSendNode in: aCodeGen [
 	| sel meth inlinedReplacement |
 	(aSendNode selector beginsWith: 'perform:') ifTrue:
 		[^self inlineFunctionCall: aSendNode asTransformedConstantPerform in: aCodeGen].
@@ -1329,7 +1459,7 @@ RustTMethod >> inlineBuiltin: aSendNode in: aCodeGen [
 ]
 
 { #category : #inlining }
-RustTMethod >> inlineCaseStatementBranchesIn: aCodeGen localizingVars: varsList [ 
+RustMethod >> inlineCaseStatementBranchesIn: aCodeGen localizingVars: varsList [ 
 	| maxTemp usedVars v exitLabel |
 	maxTemp := 0.
 	parseTree nodesDo:
@@ -1371,7 +1501,7 @@ RustTMethod >> inlineCaseStatementBranchesIn: aCodeGen localizingVars: varsList 
 ]
 
 { #category : #inlining }
-RustTMethod >> inlineCodeOrNilForStatement: aNode returningNodes: returningNodes in: aCodeGen [
+RustMethod >> inlineCodeOrNilForStatement: aNode returningNodes: returningNodes in: aCodeGen [
 	"If the given statement node can be inlined, answer the statements that replace it. Otherwise, answer nil."
 
 	| stmts |
@@ -1394,7 +1524,7 @@ RustTMethod >> inlineCodeOrNilForStatement: aNode returningNodes: returningNodes
 ]
 
 { #category : #inlining }
-RustTMethod >> inlineConditional: aSendNode in: aCodeGen [
+RustMethod >> inlineConditional: aSendNode in: aCodeGen [
 	"If possible answer the inlining of a conditional, otherwise answer nil.
 	 Currently the only pattern we support is
 		aSend ifTrue:/ifFalse: [...]
@@ -1408,7 +1538,7 @@ RustTMethod >> inlineConditional: aSendNode in: aCodeGen [
 ]
 
 { #category : #inlining }
-RustTMethod >> inlineFunctionCall: aSendNode in: aCodeGen [
+RustMethod >> inlineFunctionCall: aSendNode in: aCodeGen [
 	"Answer the body of the called function, substituting the actual
 	 parameters for the formal argument variables in the method body.
 	 Assume caller has established that:
@@ -1446,7 +1576,7 @@ RustTMethod >> inlineFunctionCall: aSendNode in: aCodeGen [
 ]
 
 { #category : #inlining }
-RustTMethod >> inlineGuardingConditional: aSendNode in: aCodeGen [
+RustMethod >> inlineGuardingConditional: aSendNode in: aCodeGen [
 	"Inline
 		aSend ifTrue:/ifFalse: [statements]
 	 where aSend is inlineable and always answers booleans.  We convert
@@ -1494,7 +1624,7 @@ RustTMethod >> inlineGuardingConditional: aSendNode in: aCodeGen [
 ]
 
 { #category : #inlining }
-RustTMethod >> inlineReturningConditional: aSendNode in: aCodeGen [
+RustMethod >> inlineReturningConditional: aSendNode in: aCodeGen [
 	"Inline
 		aSend ifTrue:/ifFalse: [^expr]
 	 where aSend is inlineable and always answers booleans.  We inline ^expr
@@ -1547,7 +1677,7 @@ RustTMethod >> inlineReturningConditional: aSendNode in: aCodeGen [
 ]
 
 { #category : #inlining }
-RustTMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in: aCodeGen [
+RustMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in: aCodeGen [
 	"Answer a collection of statements to replace the given send.  directReturn indicates
 	 that the send is the expression in a return statement, so returns can be left in the
 	 body of the inlined method. If exitVar is nil, the value returned by the send is not
@@ -1630,7 +1760,7 @@ RustTMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar
 ]
 
 { #category : #inlining }
-RustTMethod >> inlineableFunctionCall: aNode in: aCodeGen [
+RustMethod >> inlineableFunctionCall: aNode in: aCodeGen [
 	"Answer if the given send node is a call to a 'functional' method--a method whose body is a single return statement of some expression and whose actual parameters can all be directly substituted."
 
 	aCodeGen maybeBreakForTestToInline: aNode in: self.
@@ -1652,7 +1782,7 @@ RustTMethod >> inlineableFunctionCall: aNode in: aCodeGen [
 ]
 
 { #category : #inlining }
-RustTMethod >> inlineableSend: aNode in: aCodeGen [
+RustMethod >> inlineableSend: aNode in: aCodeGen [
 	"Answer if the given send node is a call to a method that can be inlined."
 
 	| m |
@@ -1667,7 +1797,7 @@ RustTMethod >> inlineableSend: aNode in: aCodeGen [
 ]
 
 { #category : #'primitive compilation' }
-RustTMethod >> instVarGetExprFor: varName offset: instIndex [
+RustMethod >> instVarGetExprFor: varName offset: instIndex [
 	"Return the parse tree for an expression that fetches and converts the value of the instance variable at the given offset."
 
 	| exprList decl stmtList |
@@ -1695,7 +1825,7 @@ RustTMethod >> instVarGetExprFor: varName offset: instIndex [
 ]
 
 { #category : #'primitive compilation' }
-RustTMethod >> instVarPutExprFor: varName offset: instIndex [
+RustMethod >> instVarPutExprFor: varName offset: instIndex [
 	"Return the parse tree for an expression that saves the value of the integer instance variable at the given offset."
 
 	| expr |
@@ -1708,26 +1838,33 @@ RustTMethod >> instVarPutExprFor: varName offset: instIndex [
 ]
 
 { #category : #testing }
-RustTMethod >> isAPIMethod [
+RustMethod >> isAPIMethod [
 	^properties notNil
 	  and: [(properties includesKey: #api)
 			or: [properties includesKey: #api:]]
 ]
 
 { #category : #testing }
-RustTMethod >> isAssertion [
+RustMethod >> isAssertion [
 	^(selector beginsWith: 'assert') or: [selector beginsWith: 'verify']
 ]
 
+{ #category : #'api - testing' }
+RustMethod >> isClassSide [
+	<return: #Boolean>
+	
+	^ (definingClass >> selector) methodClass isClassSide
+]
+
 { #category : #accessing }
-RustTMethod >> isComplete [
+RustMethod >> isComplete [
 	"A method is 'complete' if it does not contain any more inline-able calls."
 
 	^complete
 ]
 
 { #category : #inlining }
-RustTMethod >> isConditionalToBeTransformedForAssignment: aSend in: aCodeGen [
+RustMethod >> isConditionalToBeTransformedForAssignment: aSend in: aCodeGen [
 	"Answer if a send is of the form
 		e1
 			ifTrue: [e2 ifTrue: [self m1] ifFalse: [self m2]]
@@ -1746,7 +1883,7 @@ RustTMethod >> isConditionalToBeTransformedForAssignment: aSend in: aCodeGen [
 ]
 
 { #category : #inlining }
-RustTMethod >> isFunctionalIn: aCodeGen [
+RustMethod >> isFunctionalIn: aCodeGen [
 	"Answer if the receiver is a functional method. That is, if it
 	 consists of a single return statement of an expression that
 	 contains no other returns, or an assert or flag followed by
@@ -1774,7 +1911,7 @@ RustTMethod >> isFunctionalIn: aCodeGen [
 ]
 
 { #category : #inlining }
-RustTMethod >> isInlineableConditional: aSendNode in: aCodeGen [
+RustMethod >> isInlineableConditional: aSendNode in: aCodeGen [
 	"Answer if the given send node is of the form aSend [ifTrue:|ifFalse:] [statements]
 	 where the method for aSend is marked as inline and all returns within it answer booleans."
 	|method |
@@ -1790,8 +1927,15 @@ RustTMethod >> isInlineableConditional: aSendNode in: aCodeGen [
 				 and: [#(true false) includes: node expression value]]]]]]]]
 ]
 
+{ #category : #'api - testing' }
+RustMethod >> isInstanceSide [
+	<return: #Boolean>
+	
+	^ (definingClass >> selector) methodClass isClassSide not
+]
+
 { #category : #inlining }
-RustTMethod >> isNode: aNode substitutableFor: argName inMethod: targetMeth in: aCodeGen [
+RustMethod >> isNode: aNode substitutableFor: argName inMethod: targetMeth in: aCodeGen [
 	"Answer if the given parameter node may be substituted directly into the body of
 	 the method during inlining, instead of being bound to the actual parameter variable.
 	 We allow a constant, a local variable, or a formal parameter, or simple expressions
@@ -1880,31 +2024,31 @@ RustTMethod >> isNode: aNode substitutableFor: argName inMethod: targetMeth in: 
 ]
 
 { #category : #testing }
-RustTMethod >> isRealMethod [
+RustMethod >> isRealMethod [
 	^(self definedAsMacro or: [self isStructAccessor]) not
 ]
 
 { #category : #testing }
-RustTMethod >> isReturnConstant [
-	^parseTree statements size = 1
+RustMethod >> isReturnConstant [
+	^ parseTree statements size = 1
 	 and: [parseTree statements last isReturn
 	 and: [parseTree statements last expression isLeaf]]
 ]
 
 { #category : #accessing }
-RustTMethod >> isStatic [
+RustMethod >> isStatic [
 	^static ifNil:[false].
 ]
 
 { #category : #testing }
-RustTMethod >> isStructAccessor [
+RustMethod >> isStructAccessor [
 	^[definingClass isAccessor: selector]
 		on: MessageNotUnderstood
 		do: [:ex| false]
 ]
 
 { #category : #inlining }
-RustTMethod >> isSubstitutableNode: aNode intoMethod: targetMeth in: aCodeGen [
+RustMethod >> isSubstitutableNode: aNode intoMethod: targetMeth in: aCodeGen [
 	"Answer true if the given parameter node is either a constant, a local variable, or a formal parameter of the receiver. Such parameter nodes may be substituted directly into the body of the method during inlining. Note that global variables cannot be subsituted into methods with possible side effects (i.e., methods that may assign to global variables) because the inlined method might depend on having the value of the global variable captured when it is passed in as an argument."
 
 	| var |
@@ -1947,31 +2091,31 @@ RustTMethod >> isSubstitutableNode: aNode intoMethod: targetMeth in: aCodeGen [
 ]
 
 { #category : #testing }
-RustTMethod >> isTMethod [
+RustMethod >> isTMethod [
 	^true
 ]
 
 { #category : #accessing }
-RustTMethod >> labels [
+RustMethod >> labels [
 
 	^labels
 ]
 
 { #category : #accessing }
-RustTMethod >> labels: aCollection [
+RustMethod >> labels: aCollection [
 
 	labels := aCollection asSet
 ]
 
 { #category : #accessing }
-RustTMethod >> locals [
+RustMethod >> locals [
 	"The local variables of this method."
 
 	^locals
 ]
 
 { #category : #transformations }
-RustTMethod >> mapSendsFromSelfToInterpreterProxy: selectors [
+RustMethod >> mapSendsFromSelfToInterpreterProxy: selectors [
 	| interpreterProxyNode |
 	interpreterProxyNode := RustTVariableNode new setName: 'interpreterProxy'.
 	parseTree nodesDo:
@@ -1984,12 +2128,12 @@ RustTMethod >> mapSendsFromSelfToInterpreterProxy: selectors [
 ]
 
 { #category : #accessing }
-RustTMethod >> mayBeInlined [
+RustMethod >> mayBeInlined [
 	^inline == true or: [inline == nil or: [inline == #always]]
 ]
 
 { #category : #'inlining support' }
-RustTMethod >> maySubstituteGlobal: globalVar in: aCodeGen [
+RustMethod >> maySubstituteGlobal: globalVar in: aCodeGen [
 	"We can substitute globalVar into this method provided globalVar is only read, not written."
 
 	writtenToGlobalVarsCache = nil ifTrue:
@@ -1998,7 +2142,7 @@ RustTMethod >> maySubstituteGlobal: globalVar in: aCodeGen [
 ]
 
 { #category : #inlining }
-RustTMethod >> mergePropertiesOfSuperMethod: superTMethod [
+RustMethod >> mergePropertiesOfSuperMethod: superTMethod [
 	superTMethod hasProperties ifFalse:
 		[^self].
 	self hasProperties ifFalse:
@@ -2011,7 +2155,7 @@ RustTMethod >> mergePropertiesOfSuperMethod: superTMethod [
 ]
 
 { #category : #'inlining support' }
-RustTMethod >> methodIsEffectivelyComplete: selector in: aCodeGen [
+RustMethod >> methodIsEffectivelyComplete: selector in: aCodeGen [
 	"Answer if selector is effectively not inlineable in the receiver.
 	 This is tricky because block inlining requires that certain methods must be inlined, which
 	 can be at odds wuth the opportunistic strategy the inliner takes.  Since the inliner only
@@ -2030,12 +2174,12 @@ RustTMethod >> methodIsEffectivelyComplete: selector in: aCodeGen [
 ]
 
 { #category : #accessing }
-RustTMethod >> mustBeInlined [
+RustMethod >> mustBeInlined [
 	^inline == #always
 ]
 
 { #category : #'instance creation' }
-RustTMethod >> newCascadeTempFor: aTParseNode [
+RustMethod >> newCascadeTempFor: aTParseNode [
 	| varName varNode |
 	varName := self extraVariableName: 'cascade'.
 	varNode := RustTVariableNode new setName: varName.
@@ -2061,12 +2205,12 @@ RustTMethod >> newCascadeTempFor: aTParseNode [
 ]
 
 { #category : #accessing }
-RustTMethod >> newDeclarations: aDictionary [
+RustMethod >> newDeclarations: aDictionary [
 	declarations := aDictionary
 ]
 
 { #category : #utilities }
-RustTMethod >> nodeCount [
+RustMethod >> nodeCount [
 	"Answer the number of nodes in this method's parseTree (a rough measure of its size)."
 
 	| cnt |
@@ -2076,13 +2220,13 @@ RustTMethod >> nodeCount [
 ]
 
 { #category : #utilities }
-RustTMethod >> noteUsedVariableName: token [
+RustMethod >> noteUsedVariableName: token [
 	usedVariablesCache ifNotNil:
 		[usedVariablesCache add: token]
 ]
 
 { #category : #private }
-RustTMethod >> oopVariable: aString [
+RustMethod >> oopVariable: aString [
 
 	(locals includes: aString) ifFalse:
 		[locals add: aString.
@@ -2091,7 +2235,7 @@ RustTMethod >> oopVariable: aString [
 ]
 
 { #category : #'C code generation' }
-RustTMethod >> outputConditionalDefineFor: compileTimeOptionPragmas on: aStream [
+RustMethod >> outputConditionalDefineFor: compileTimeOptionPragmas on: aStream [
 	aStream nextPutAll: '#if '.
 	compileTimeOptionPragmas
 		do: [:pragma|
@@ -2103,21 +2247,21 @@ RustTMethod >> outputConditionalDefineFor: compileTimeOptionPragmas on: aStream 
 ]
 
 { #category : #accessing }
-RustTMethod >> parseTree [
+RustMethod >> parseTree [
 	"The parse tree of this method."
 
 	^parseTree
 ]
 
 { #category : #accessing }
-RustTMethod >> parseTree: aNode [
+RustMethod >> parseTree: aNode [
 	"Set the parse tree of this method."
 
 	parseTree := aNode.
 ]
 
 { #category : #'primitive compilation' }
-RustTMethod >> popArgsExpr: argCount [
+RustMethod >> popArgsExpr: argCount [
 	"Return the parse tree for an expression that pops the given number of arguments from the stack."
 
 	| expr |
@@ -2127,7 +2271,7 @@ RustTMethod >> popArgsExpr: argCount [
 ]
 
 { #category : #copying }
-RustTMethod >> postCopy [
+RustMethod >> postCopy [
 	args := args copy.
 	locals := locals copy.
 	declarations := declarations copy.
@@ -2136,7 +2280,7 @@ RustTMethod >> postCopy [
 ]
 
 { #category : #transformations }
-RustTMethod >> prepareMethodIn: aCodeGen [
+RustMethod >> prepareMethodIn: aCodeGen [
 	"Record sends of builtin operators, map sends of the special selector dispatchOn:in:
 	 with case statement nodes, and map sends of caseOf:[otherwise:] to switch statements.
 	 Declare limit variables for to:[by:]do: loops with limits that potentially have side-effects.
@@ -2179,7 +2323,7 @@ RustTMethod >> prepareMethodIn: aCodeGen [
 ]
 
 { #category : #'primitive compilation' }
-RustTMethod >> preparePrimitiveName [
+RustMethod >> preparePrimitiveName [
 	"Prepare the selector for this method in translation.
 	 Remember the original selector in properties."
 	| aClass |
@@ -2197,7 +2341,7 @@ RustTMethod >> preparePrimitiveName [
 ]
 
 { #category : #'primitive compilation' }
-RustTMethod >> preparePrimitivePrologue [
+RustMethod >> preparePrimitivePrologue [
 	"Add a prolog and postlog to a primitive method. The prolog copies any instance variables referenced by this primitive method into local variables. The postlog copies values of assigned-to variables back into the instance. The names of the new locals are added to the local variables list.
 
 The declarations dictionary defines the types of any non-integer variables (locals, arguments, or instance variables). In particular, it may specify the types:
@@ -2262,7 +2406,7 @@ Undeclared variables are taken to be integers and will be converted from Smallta
 ]
 
 { #category : #accessing }
-RustTMethod >> primitive [
+RustMethod >> primitive [
 	"The primitive number of this method; zero if not a primitive."
 
 	^ primitive
@@ -2270,14 +2414,14 @@ RustTMethod >> primitive [
 ]
 
 { #category : #printing }
-RustTMethod >> printOn: aStream [
+RustMethod >> printOn: aStream [
 
 	super printOn: aStream.
 	aStream nextPutAll: ' (', definingClass name, '>>', selector, ')'.
 ]
 
 { #category : #'C code generation' }
-RustTMethod >> printSingleComment: aString on: aStream indent: indent tabWidth: tabWidth lineBreak: lineBreak [
+RustMethod >> printSingleComment: aString on: aStream indent: indent tabWidth: tabWidth lineBreak: lineBreak [
 	"Shameless hack of ParseNode>>printSingleComment:on:indent: for formatting comments."
 	| readStream position wordStream |
 	readStream := ReadStream on: aString.
@@ -2316,13 +2460,13 @@ RustTMethod >> printSingleComment: aString on: aStream indent: indent tabWidth: 
 ]
 
 { #category : #private }
-RustTMethod >> printTempsAndVar: varName on: aStream [ 
+RustMethod >> printTempsAndVar: varName on: aStream [ 
 	"add the required temps and the varname to the stream"
 	aStream nextPutAll: '| rcvr stackPointer interpreterProxy ' , varName , ' |'; cr
 ]
 
 { #category : #'inlining support' }
-RustTMethod >> propagateReturnIn: aCodeGen [
+RustMethod >> propagateReturnIn: aCodeGen [
 	"Propagate the return type to all return nodes"
 	| map coercionType |
 	
@@ -2344,17 +2488,17 @@ RustTMethod >> propagateReturnIn: aCodeGen [
 ]
 
 { #category : #accessing }
-RustTMethod >> properties [
+RustMethod >> properties [
 	^properties
 ]
 
 { #category : #initialization }
-RustTMethod >> properties: anAdditionalMethodState [
+RustMethod >> properties: anAdditionalMethodState [
 	properties := anAdditionalMethodState
 ]
 
 { #category : #accessing }
-RustTMethod >> readsVariable: variableName [
+RustMethod >> readsVariable: variableName [
 	"Answer if the receiver reads the variable (i.e. ignore assignments to the variable)."
 	parseTree nodesWithParentsDo:
 		[:node :parent|
@@ -2368,7 +2512,7 @@ RustTMethod >> readsVariable: variableName [
 ]
 
 { #category : #transformations }
-RustTMethod >> recordDeclarationsIn: aCCodeGen [
+RustMethod >> recordDeclarationsIn: aCCodeGen [
 	"Record C type declarations of the forms
 		<returnTypeC: 'float'>
 		<var: #foo declareC: 'float foo'>
@@ -2425,22 +2569,22 @@ RustTMethod >> recordDeclarationsIn: aCCodeGen [
 ]
 
 { #category : #accessing }
-RustTMethod >> referencesGlobalStruct [
+RustMethod >> referencesGlobalStruct [
 	globalStructureBuildMethodHasFoo := true
 ]
 
 { #category : #accessing }
-RustTMethod >> refersToGlobalStruct [
+RustMethod >> refersToGlobalStruct [
 	^globalStructureBuildMethodHasFoo
 ]
 
 { #category : #transformations }
-RustTMethod >> removeAssertions [
+RustMethod >> removeAssertions [
 	parseTree removeAssertions
 ]
 
 { #category : #transformations }
-RustTMethod >> removeFinalSelfReturnIn: aCodeGenOrNil [
+RustMethod >> removeFinalSelfReturnIn: aCodeGenOrNil [
 	"The Smalltalk parser automatically adds the statement '^self' to the end of methods
 	 without explicit returns.  This method removes such statements, since in most VMMaker
 	 classes (except struct classes) the generated code has no notion of 'self' anyway.
@@ -2465,7 +2609,7 @@ RustTMethod >> removeFinalSelfReturnIn: aCodeGenOrNil [
 ]
 
 { #category : #removing }
-RustTMethod >> removeUnusedTempsAndNilIfRequiredIn: aCodeGen [
+RustMethod >> removeUnusedTempsAndNilIfRequiredIn: aCodeGen [
 	"Remove all of the unused temps in this method. Answer a set of the references.
 	 As a side-effect introduce explicit temp := nil statements for temps that are
 	 tested for nil before necessarily being assigned."
@@ -2503,7 +2647,7 @@ RustTMethod >> removeUnusedTempsAndNilIfRequiredIn: aCodeGen [
 ]
 
 { #category : #utilities }
-RustTMethod >> removeUnusedTempsIn: aCodeGen [
+RustMethod >> removeUnusedTempsIn: aCodeGen [
 	"Remove all of the unused temps in this method. Answer a set of the references."
 	"After inlining some variable references are now obsolete, we could fix them there
 	 but the code seems a bit complicated, the other choice to to rebuild the locals
@@ -2525,7 +2669,7 @@ RustTMethod >> removeUnusedTempsIn: aCodeGen [
 ]
 
 { #category : #'inlining support' }
-RustTMethod >> renameLabelsForInliningInto: destMethod [
+RustMethod >> renameLabelsForInliningInto: destMethod [
 	"Rename any labels that would clash with those of the destination method."
 
 	| destLabels usedLabels labelMap newLabelName |
@@ -2543,7 +2687,7 @@ RustTMethod >> renameLabelsForInliningInto: destMethod [
 ]
 
 { #category : #'inlining support' }
-RustTMethod >> renameLabelsUsing: aDictionary [
+RustMethod >> renameLabelsUsing: aDictionary [
 	"Rename all labels according to the old->new mappings of the given dictionary."
 
 	aDictionary isEmpty ifTrue:
@@ -2559,7 +2703,7 @@ RustTMethod >> renameLabelsUsing: aDictionary [
 ]
 
 { #category : #'inlining support' }
-RustTMethod >> renameVariablesUsing: aDictionary [
+RustMethod >> renameVariablesUsing: aDictionary [
 	"Rename all variables according to old->new mappings of the given dictionary."
 
 	| newDecls newProperties |
@@ -2604,7 +2748,7 @@ RustTMethod >> renameVariablesUsing: aDictionary [
 ]
 
 { #category : #'inlining support' }
-RustTMethod >> renameVarsForInliningInto: destMethod except: doNotRename in: aCodeGen [
+RustMethod >> renameVarsForInliningInto: destMethod except: doNotRename in: aCodeGen [
 	"Rename any variables that would clash with those of the destination method."
 
 	| destVars usedVars varMap newVarName |
@@ -2624,12 +2768,12 @@ RustTMethod >> renameVarsForInliningInto: destMethod except: doNotRename in: aCo
 ]
 
 { #category : #transformations }
-RustTMethod >> replaceNodesIn: map [
+RustMethod >> replaceNodesIn: map [
 	parseTree := parseTree replaceNodesIn: map.
 ]
 
 { #category : #'primitive compilation' }
-RustTMethod >> replaceSizeMessages [
+RustMethod >> replaceSizeMessages [
 	"Replace sends of the message 'size' with calls to sizeOfSTArrayFromCPrimitive."
 
 	| argExpr |
@@ -2647,14 +2791,14 @@ RustTMethod >> replaceSizeMessages [
 ]
 
 { #category : #accessing }
-RustTMethod >> returnType [
+RustMethod >> returnType [
 	"The type of the values returned by this method. This string will be used in the C declaration of this function."
 
 	^returnType
 ]
 
 { #category : #accessing }
-RustTMethod >> returnType: aRustType [
+RustMethod >> returnType: aRustType [
 	"Set the type of the values returned by this method.
 	 This string will be used in the C declaration of this function.
 	 If the type exists as a symbol, use that."
@@ -2672,27 +2816,27 @@ RustTMethod >> returnType: aRustType [
 ]
 
 { #category : #testing }
-RustTMethod >> returnsExpression [
+RustMethod >> returnsExpression [
 	"Answer true if the last statement of this method is a return of some expression, not merely self or nil."
 
 	^parseTree returnsExpression
 ]
 
 { #category : #accessing }
-RustTMethod >> selector [
+RustMethod >> selector [
 	"The Smalltalk selector of this method."
 
 	^selector
 ]
 
 { #category : #accessing }
-RustTMethod >> selector: newSelector [
+RustMethod >> selector: newSelector [
 
 	selector := newSelector.
 ]
 
 { #category : #initialization }
-RustTMethod >> setSelector: sel definingClass: class args: argList locals: localList block: aBlockNode primitive: aNumber properties: methodProperties comment: aComment [
+RustMethod >> setSelector: sel definingClass: class args: argList locals: localList block: aBlockNode primitive: aNumber properties: methodProperties comment: aComment [
 	"Initialize this method using the given information."
 
 	selector := sel.
@@ -2715,17 +2859,17 @@ RustTMethod >> setSelector: sel definingClass: class args: argList locals: local
 ]
 
 { #category : #accessing }
-RustTMethod >> sharedCase [
+RustMethod >> sharedCase [
 	^sharedCase
 ]
 
 { #category : #accessing }
-RustTMethod >> sharedLabel [
+RustMethod >> sharedLabel [
 	^sharedLabel
 ]
 
 { #category : #inlining }
-RustTMethod >> shouldIncorporatePragmaFromSuperMethod: aPragma [
+RustMethod >> shouldIncorporatePragmaFromSuperMethod: aPragma [
 	(properties includesKey: aPragma keyword) ifFalse:
 		[^true].
 	((aPragma keyword beginsWith: #var:)
@@ -2738,13 +2882,13 @@ RustTMethod >> shouldIncorporatePragmaFromSuperMethod: aPragma [
 ]
 
 { #category : #accessing }
-RustTMethod >> smalltalkSelector [
+RustMethod >> smalltalkSelector [
 	"Answer the selector of the original Smalltalk method, not any mangled one."
 	^selector
 ]
 
 { #category : #accessing }
-RustTMethod >> statements [
+RustMethod >> statements [
 
 	parseTree isStmtList
 		ifFalse: [ self error: 'expected method parse tree to be a TStmtListNode' ].
@@ -2755,7 +2899,7 @@ RustTMethod >> statements [
 ]
 
 { #category : #'primitive compilation' }
-RustTMethod >> statementsFor: sourceText varName: varName [
+RustMethod >> statementsFor: sourceText varName: varName [
 	"Return the parse tree for the given expression. The result is the statements list of the method parsed from the given source text."
 	"Details: Various variables are declared as locals to avoid Undeclared warnings from the parser."
 
@@ -2780,7 +2924,7 @@ RustTMethod >> statementsFor: sourceText varName: varName [
 ]
 
 { #category : #inlining }
-RustTMethod >> statementsListsForInliningIn: aCodeGen [
+RustMethod >> statementsListsForInliningIn: aCodeGen [
 	"Answer a collection of statement list nodes that are candidates for inlining.
 	 Currently, we cannot inline into the argument blocks of and: and or: messages.
 	 We do not want to inline code strings within cCode:inSmalltalk: blocks (those with a
@@ -2833,17 +2977,29 @@ RustTMethod >> statementsListsForInliningIn: aCodeGen [
 ]
 
 { #category : #accessing }
-RustTMethod >> static [
+RustMethod >> static [
 	^static
 ]
 
 { #category : #accessing }
-RustTMethod >> static: aBoolean [
+RustMethod >> static: aBoolean [
 	static := aBoolean
 ]
 
+{ #category : #accessing }
+RustMethod >> structure [
+	<return: #RustStructure>
+
+	^ structure
+]
+
+{ #category : #accessing }
+RustMethod >> structure: aRustStructure [
+	structure := aRustStructure
+]
+
 { #category : #inlining }
-RustTMethod >> superExpansionNodeFor: aSelector args: argumentNodes [
+RustMethod >> superExpansionNodeFor: aSelector args: argumentNodes [
 	"Answer the expansion of a super send.  Merge the super expansion's
 	 locals, properties and comment into this method's properties."
 	(definingClass superclass lookupSelector: aSelector)
@@ -2881,7 +3037,7 @@ RustTMethod >> superExpansionNodeFor: aSelector args: argumentNodes [
 ]
 
 { #category : #'C code generation' }
-RustTMethod >> terminateConditionalDefineFor: compileTimeOptionPragmas on: aStream [
+RustMethod >> terminateConditionalDefineFor: compileTimeOptionPragmas on: aStream [
 	compileTimeOptionPragmas ifEmpty: [^self].
 	aStream nextPutAll: '#endif /* '.
 	compileTimeOptionPragmas
@@ -2894,7 +3050,7 @@ RustTMethod >> terminateConditionalDefineFor: compileTimeOptionPragmas on: aStre
 ]
 
 { #category : #inlining }
-RustTMethod >> transformConditionalAssignment: node in: aCodeGen [
+RustMethod >> transformConditionalAssignment: node in: aCodeGen [
 	"If possible answer the transformation of code of the form
 		var := e1
 				ifTrue: [e2 ifTrue: [self m1] ifFalse: [self m2]]
@@ -2918,7 +3074,7 @@ RustTMethod >> transformConditionalAssignment: node in: aCodeGen [
 ]
 
 { #category : #inlining }
-RustTMethod >> transformReturnSubExpression: node toAssignmentOf: exitVar andGoto: exitLabel unless: eliminateReturnSelfs into: aBinaryBlock [
+RustMethod >> transformReturnSubExpression: node toAssignmentOf: exitVar andGoto: exitLabel unless: eliminateReturnSelfs into: aBinaryBlock [
 	| expr replacement |
 	expr := node isReturn ifTrue: [node expression] ifFalse: [node].
 	replacement := (expr isVariable "Eliminate ^self's"
@@ -2947,7 +3103,7 @@ RustTMethod >> transformReturnSubExpression: node toAssignmentOf: exitVar andGot
 ]
 
 { #category : #'type inference' }
-RustTMethod >> transformReturns [
+RustMethod >> transformReturns [
 	"Once the return type has been found or inferred, returns may bneed to be modified.
 	 If the return type is #void, any occurrences of ^expr must be replaced with expr. ^self.
 	 If the type is #sqInt any any occurrences of ^self are replaced with ^0."
@@ -2973,7 +3129,7 @@ RustTMethod >> transformReturns [
 ]
 
 { #category : #transformations }
-RustTMethod >> transformToStructClassMethodFor: aCCodeGenerator [
+RustMethod >> transformToStructClassMethodFor: aCCodeGenerator [
 	"Transform this method so that it can be used on an instance of a struct class (VMStructType subclass).
 	 Convert inst var refs into field dereferences of self.  Add selfSelector as the first argument with the
 	 right struct type. As a complete hack to avoid breaking the inlinert don't use 'self' as the name for self
@@ -3008,7 +3164,7 @@ RustTMethod >> transformToStructClassMethodFor: aCCodeGenerator [
 ]
 
 { #category : #inlining }
-RustTMethod >> tryToInlineMethodExpressionsIn: aCodeGen [
+RustMethod >> tryToInlineMethodExpressionsIn: aCodeGen [
 	"Expand any (complete) inline methods sent by this method as receivers or parameters.
 	 Answer if anything was inlined."
 
@@ -3041,7 +3197,7 @@ RustTMethod >> tryToInlineMethodExpressionsIn: aCodeGen [
 ]
 
 { #category : #inlining }
-RustTMethod >> tryToInlineMethodStatementsIn: aCodeGen statementListsInto: aBlock [
+RustMethod >> tryToInlineMethodStatementsIn: aCodeGen statementListsInto: aBlock [
 	"Expand any (complete) inline methods sent by this method as top-level statements.
 	 Answer if anything was inlined."
 
@@ -3084,7 +3240,7 @@ RustTMethod >> tryToInlineMethodStatementsIn: aCodeGen statementListsInto: aBloc
 ]
 
 { #category : #inlining }
-RustTMethod >> tryToInlineMethodsIn: aCodeGen [
+RustMethod >> tryToInlineMethodsIn: aCodeGen [
 	"Expand any (complete) inline methods sent by this method.
 	 Set the complete flag when all inlining has been done.
 	 Answer if something was inlined."
@@ -3112,7 +3268,7 @@ RustTMethod >> tryToInlineMethodsIn: aCodeGen [
 ]
 
 { #category : #utilities }
-RustTMethod >> typeFor: aVariable in: aCodeGen [
+RustMethod >> typeFor: aVariable in: aCodeGen [
 	"Answer the type for aVariable, deferring to aCodeGen (which defers to the vmClass)
 	 if no type is found and the variable is global (not an arg or a local).  Expect the
 	 cCodeGen to answer nil for variables without types. nil for typelessness is required
@@ -3132,7 +3288,7 @@ RustTMethod >> typeFor: aVariable in: aCodeGen [
 ]
 
 { #category : #utilities }
-RustTMethod >> typeForSelf [
+RustMethod >> typeForSelf [
 	self assert: definingClass notNil.
 	^[definingClass typeForSelf]
 		on: MessageNotUnderstood
@@ -3140,12 +3296,12 @@ RustTMethod >> typeForSelf [
 ]
 
 { #category : #inlining }
-RustTMethod >> unusedLabelForInlining: sourceMethod [
+RustMethod >> unusedLabelForInlining: sourceMethod [
 	^labels add: (self unusedLabelForInliningInto: sourceMethod)
 ]
 
 { #category : #inlining }
-RustTMethod >> unusedLabelForInliningInto: targetMethod [
+RustMethod >> unusedLabelForInliningInto: targetMethod [
 	^self unusedNamePrefixedBy: 'l' avoiding: (targetMethod == self
 												ifTrue: [labels]
 												ifFalse: [labels copy
@@ -3154,7 +3310,7 @@ RustTMethod >> unusedLabelForInliningInto: targetMethod [
 ]
 
 { #category : #'inlining support' }
-RustTMethod >> unusedNamePrefixedBy: aString avoiding: usedNames [
+RustMethod >> unusedNamePrefixedBy: aString avoiding: usedNames [
 	"Choose a unique variable or label name with the given string as a prefix, avoiding
 	 the names in the given collection. The selected name is added to usedNames."
 
@@ -3167,7 +3323,7 @@ RustTMethod >> unusedNamePrefixedBy: aString avoiding: usedNames [
 ]
 
 { #category : #inlining }
-RustTMethod >> usesVariableUninlinably: argName in: aCodeGen [
+RustMethod >> usesVariableUninlinably: argName in: aCodeGen [
 	^parseTree anySatisfy:
 		[:node|
 		node isSend
@@ -3180,7 +3336,7 @@ RustTMethod >> usesVariableUninlinably: argName in: aCodeGen [
 ]
 
 { #category : #utilities }
-RustTMethod >> variablesAssignedTo [
+RustMethod >> variablesAssignedTo [
 	"Answer a collection of variables assigned to by this method."
 
 	| refs |
@@ -3192,7 +3348,7 @@ RustTMethod >> variablesAssignedTo [
 ]
 
 { #category : #'primitive compilation' }
-RustTMethod >> vmNameString [
+RustMethod >> vmNameString [
 	"return the string to use as the vm name in code generated for this method"
 	^'self'
 ]

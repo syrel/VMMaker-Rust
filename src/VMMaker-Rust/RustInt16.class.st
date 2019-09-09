@@ -20,7 +20,7 @@ RustInt16 >> assertValueType: anObject [
 	aHighBit := anObject positive
 		ifTrue: [ anObject highBit ]
 		ifFalse: [ anObject bitInvert highBit ].
-		
+
 	self
 		assert: [ aHighBit between: 8 and: 15 ]
 		description: [ 'Must be 8 to 15 bit integer' ].

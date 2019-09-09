@@ -7,6 +7,11 @@ Class {
 	#category : #'VMMaker-Rust-Types'
 }
 
+{ #category : #converting }
+RustTypedValue class >> asRustType [
+	^ self new
+]
+
 { #category : #accessing }
 RustTypedValue class >> value: anObject [
 	^ self new value: anObject
@@ -83,6 +88,21 @@ RustTypedValue >> hash [
 ]
 
 { #category : #testing }
+RustTypedValue >> isFloat [
+	^ false
+]
+
+{ #category : #testing }
+RustTypedValue >> isInteger [
+	^ false
+]
+
+{ #category : #testing }
+RustTypedValue >> isNumber [
+	^ false
+]
+
+{ #category : #testing }
 RustTypedValue >> isOption [
 	^ false
 ]
@@ -103,6 +123,14 @@ RustTypedValue >> isSimple [
 { #category : #testing }
 RustTypedValue >> isUnknown [
 	^ false
+]
+
+{ #category : #comparing }
+RustTypedValue >> sameAs: anotherObject [
+	self == anotherObject
+		ifTrue: [ ^ true ].
+
+	^ self class == anotherObject class
 ]
 
 { #category : #accessing }
