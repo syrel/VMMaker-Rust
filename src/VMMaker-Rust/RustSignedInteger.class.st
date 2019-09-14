@@ -19,3 +19,8 @@ RustSignedInteger class >> ofSize: amountBits [
 						ifTrue: [ RustInt32 new ]
 						ifFalse: [ RustInt64 new ] ] ]
 ]
+
+{ #category : #testing }
+RustSignedInteger >> isSigned [
+	^ true
+]

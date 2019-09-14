@@ -7,3 +7,31 @@ Class {
 	],
 	#category : #'VMMaker-Rust-Examples - Cities'
 }
+
+{ #category : #'as yet unclassified' }
+RustExamplePoint class >> rustInstanceVariableDeclariation [
+	^ {
+		#x -> RustFloat64.
+		#y -> RustFloat64
+	}
+]
+
+{ #category : #accessing }
+RustExamplePoint >> x [
+	^ x
+]
+
+{ #category : #accessing }
+RustExamplePoint >> x: anObject [
+	x := anObject
+]
+
+{ #category : #accessing }
+RustExamplePoint >> y [
+	^ y
+]
+
+{ #category : #accessing }
+RustExamplePoint >> y: anObject [
+	y := anObject
+]

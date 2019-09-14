@@ -39,6 +39,11 @@ RustMethod class >> initialize [
 	CaseStatements addAll: #(dispatchOn:in: dispatchOn:in:with: dispatchOn:in:with:with:).
 ]
 
+{ #category : #'api - declarations' }
+RustMethod >> addDeclaration: aDeclaration [
+	self declarations addDeclaration: aDeclaration
+]
+
 { #category : #accessing }
 RustMethod >> addFunctionAttribute: aString [
 	functionAttributes := functionAttributes
@@ -51,6 +56,67 @@ RustMethod >> addLabelsTo: aTMethod [
 	aTMethod labels addAll: labels
 ]
 
+{ #category : #'type inference' }
+RustMethod >> addReturnTypesFor: aNode to: typeSet in: aCodeGen [
+	"Add the value types for the node to typeSet.
+	 Answer if any type was derived from an as-yet-untyped method or variable, which allows us to abort
+	 inferReturnTypeFromReturnsIn: if the return type depends on a yet-to-be-typed method or variable."
+	| anExpressionNode |
+
+	anExpressionNode := aNode.
+	[ anExpressionNode isAssignment or: [ anExpressionNode isStmtList ] ]
+		whileTrue: [
+			anExpressionNode isAssignment
+				ifTrue: [ anExpressionNode := anExpressionNode variable ].
+		 	anExpressionNode isStmtList
+				ifTrue: [ anExpressionNode := anExpressionNode statements last ] ].
+
+	anExpressionNode isSend
+		ifTrue: [
+			"this is a special case. we should wrap result in Optional"
+			(#(ifTrue: ifFalse:) includes: anExpressionNode selector)
+				ifTrue: [
+					| theConditionalTypes asYetUntyped |
+					theConditionalTypes := Set new.
+					asYetUntyped := (self addReturnTypesFor: anExpressionNode args first to: theConditionalTypes in: aCodeGen).
+					typeSet addAll: (theConditionalTypes collect: [ :eachType | RustOption value: eachType ]).
+					^ asYetUntyped ].
+
+			(#(ifTrue:ifFalse: ifFalse:ifTrue:) includes: anExpressionNode selector)
+				ifTrue: [
+					^ anExpressionNode args
+						inject: false
+						into: [ :asYetUntyped :block | asYetUntyped | (self addReturnTypesFor: block to: typeSet in: aCodeGen) ] ].
+
+		(aCodeGen returnTypeForSend: anExpressionNode in: self ifNil: nil)
+			ifNil: [ ^ (aCodeGen methodNamed: anExpressionNode selector) notNil and: [ anExpressionNode selector ~~ selector ] ]
+			ifNotNil: [ :type | typeSet add: type asRustType. ^ false ]].
+
+	anExpressionNode isVariable ifTrue:
+		[(aCodeGen typeOfVariable: anExpressionNode name asSymbol in: self)
+			ifNotNil: [:type|
+				self assert: [ type isKindOf: RustTypedValue ].
+				typeSet add: type]
+			ifNil: [
+				| aType |
+				
+				aType := (anExpressionNode name = 'self'
+										ifTrue: [#void]
+										ifFalse: [#sqInt]).
+				self assert: [ aType isKindOf: RustTypedValue ].
+				(typeSet add: aType).
+				aType == #sqInt ifTrue:
+					[^true]]].
+
+	anExpressionNode isConstant ifTrue: [
+		(anExpressionNode typeOrNilFrom: aCodeGen in: self) ifNotNil: [ :aType |
+			self
+				assert: [ aType isKindOf: RustTypedValue ]
+				description: [ 'Must be a rust type' ].
+			typeSet add: aType ] ].
+	^ false
+]
+
 { #category : #initialization }
 RustMethod >> addTypeForSelf [
 	"If self should be typed then add a suitable type declaration.
@@ -61,67 +127,6 @@ RustMethod >> addTypeForSelf [
 			put: (typeForSelf == #implicit
 					ifTrue: [typeForSelf]
 					ifFalse: [typeForSelf, ' self'])]
-]
-
-{ #category : #'type inference' }
-RustMethod >> addTypesFor: node to: typeSet in: aCodeGen [
-	"Add the value types for the node to typeSet.
-	 Answer if any type was derived from an as-yet-untyped method or variable, which allows us to abort
-	 inferReturnTypeFromReturnsIn: if the return type depends on a yet-to-be-typed method or variable."
-	| expr |
-	expr := node.
-	[expr isAssignment or: [expr isStmtList]] whileTrue:
-		[expr isAssignment ifTrue:
-			[expr := expr variable].
-		 expr isStmtList ifTrue:
-			[expr := expr statements last]].
-	
-	expr isSend
-		ifTrue: [
-			"this is a special case. we should wrap result in Optional"
-			(#(ifTrue: ifFalse:) includes: expr selector)
-				ifTrue: [
-					| theConditionalTypes asYetUntyped |
-					theConditionalTypes := Set new.
-					asYetUntyped := (self addTypesFor: expr args first to: theConditionalTypes in: aCodeGen).
-					typeSet addAll: (theConditionalTypes collect: [ :eachType | RustOption value: eachType ]).
-					^ asYetUntyped ].
-
-			(#(ifTrue:ifFalse: ifFalse:ifTrue:) includes: expr selector)
-				ifTrue: [ ^ expr args
-					inject: false
-					into: [ :asYetUntyped :block | asYetUntyped | (self addTypesFor: block to: typeSet in: aCodeGen) ] ].
-
-		(aCodeGen returnTypeForSend: expr in: self ifNil: nil)
-			ifNil: [ ^ (aCodeGen methodNamed: expr selector) notNil and: [ expr selector ~~ selector ] ]
-			ifNotNil: [ :type |
-				typeSet add: type asRustType.
-				^false]].
-		
-
-	expr isVariable ifTrue:
-		[(aCodeGen typeOfVariable: expr name in: self)
-			ifNotNil: [:type|
-				self assert: [ type isKindOf: RustTypedValue ].
-				typeSet add: type]
-			ifNil: [
-				| aType |
-				
-				aType := (expr name = 'self'
-										ifTrue: [#void]
-										ifFalse: [#sqInt]).
-				"self assert: [ aType isKindOf: RustTypedValue ]."
-				(typeSet add: aType).
-				aType == #sqInt ifTrue:
-					[^true]]].
-
-	expr isConstant ifTrue: [
-		(expr typeOrNilFrom: aCodeGen in: self) ifNotNil: [ :aType |
-			self
-				assert: [ aType isKindOf: RustTypedValue ]
-				description: [ 'Must be a rust type' ].
-			typeSet add: aType ] ].
-	^ false
 ]
 
 { #category : #'inlining support' }
@@ -150,7 +155,7 @@ RustMethod >> allCalls [
 RustMethod >> allLocals [
 	"The merge of locals and declarations (don't ask)"
 
-	^(declarations keys asSet reject: [:k| (declarations at: k) == #implicit])
+	^(self declarationNames reject: [:k| (self declarationAt: k) == #implicit])
 		addAll: locals; yourself
 ]
 
@@ -201,7 +206,7 @@ RustMethod >> argAssignmentsFor: meth send: aSendNode except: elidedArgs in: aCo
 							inliningInto: meth
 							in: self).
 				 locals remove: argName ifAbsent: [self assert: (argName beginsWith: 'self_in_')].
-				 declarations removeKey: argName ifAbsent: nil]
+				 self removeDeclarationAt: argName ]
 			ifFalse: "Add an assignment for anything except an unused self_in_foo argument"
 				[(elidedArgs includes: argName) ifFalse:
 					[stmtList addLast:
@@ -222,7 +227,7 @@ RustMethod >> argConversionExprFor: varName stackIndex: stackIndex [
 	primitive argument at the given stack offset."
 	| exprList decl type stmtList |
 	exprList := OrderedCollection new.
-	((decl := declarations at: varName ifAbsent: []) notNil
+	((decl := self declarationAt: varName ifAbsent: [ nil ]) notNil
 	 and: ['int' ~= (type := (decl copyReplaceAll: varName with: '') withBlanksTrimmed)])
 		ifTrue:
 			[(decl includes: $*) ifTrue: "array"
@@ -373,14 +378,13 @@ RustMethod >> checkSuccessExpr [
 RustMethod >> checkedDeclarationAt: aVariableName put: aDeclaration in: aCCodeGen [
 	((args includes: aVariableName)
 	 or: [(locals includes: aVariableName)
-	 or: [(definingClass instVarIndexFor: aVariableName asString ifAbsent: nil) notNil
-	 or: [aDeclaration beginsWith: 'extern ']]]) ifFalse:
+	 or: [(definingClass instVarIndexFor: aVariableName asString ifAbsent: nil) notNil ]]) ifFalse:
 		[| msg |
 		 msg := definingClass name, '>>', selector, ' contains declaration for non-existent variable ', aVariableName.
 		 aCCodeGen
 			ifNotNil: [aCCodeGen logger show: msg; cr]
 			ifNil: [self error: msg]].
-	^self declarationAt: aVariableName  "<String>" put: aDeclaration
+	^self declarationAt: aVariableName asSymbol put: aDeclaration
 ]
 
 { #category : #accessing }
@@ -445,26 +449,62 @@ RustMethod >> computePossibleSideEffectsInto: writtenToVars visited: visitedSele
 	writtenToGlobalVarsCache := writtenToVars copy
 ]
 
-{ #category : #accessing }
+{ #category : #'api - declarations' }
 RustMethod >> declarationAt: aVariableName [
-	^declarations at: aVariableName ifAbsent: [#sqInt, ' ', aVariableName]
+	<return: #RustDeclaration>
+
+	^ self declarations declarationAt: aVariableName
 ]
 
-{ #category : #accessing }
+{ #category : #'api - declarations' }
 RustMethod >> declarationAt: aVariableName ifAbsent: absentBlock [
-	^declarations at: aVariableName ifAbsent: absentBlock
+	<return: #RustDeclaration>
+
+	^ self declarations declarationAt: aVariableName ifAbsent: absentBlock
 ]
 
-{ #category : #accessing }
-RustMethod >> declarationAt: aVariableName  "<String>" put: aDeclaration [ "<String>" "^aDeclaration"
-	^declarations at: aVariableName put: aDeclaration
+{ #category : #'api - declarations' }
+RustMethod >> declarationAt: aVariableName ifPresent: presentBlock [
+	<return: #RustDeclaration>
+
+	^ self declarations declarationAt: aVariableName ifPresent: presentBlock
 ]
 
-{ #category : #accessing }
+{ #category : #'api - declarations' }
+RustMethod >> declarationAt: aVariableName ifPresent: aPresentBlock ifAbsent: anAbsentBlock [
+	<return: #Object>
+
+	^ self declarations declarationAt: aVariableName ifPresent: aPresentBlock ifAbsent: anAbsentBlock
+]
+
+{ #category : #'api - declarations' }
+RustMethod >> declarationAt: aVariableName put: aDeclaration [
+	<return: #RustDeclaration>
+
+	^ self declarations declarationAt: aVariableName put: aDeclaration
+]
+
+{ #category : #'api - declarations' }
+RustMethod >> declarationNames [
+	<return: #Set of: #Symbol>
+	
+	^ self declarations declarationNames
+]
+
+{ #category : #'api - declarations' }
 RustMethod >> declarations [
-	"The type declaration dictionary of this method."
+	<return: #RustDeclarations>
 
-	^declarations
+	^ declarations
+]
+
+{ #category : #'api - declarations' }
+RustMethod >> declarations: theDeclarations [
+	self
+		assert: [ theDeclarations isKindOf: RustDeclarations ]
+		description: [ 'Must be declarations' ].
+
+	declarations := theDeclarations
 ]
 
 { #category : #testing }
@@ -604,38 +644,6 @@ RustMethod >> emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: i
 	^compileTimeOptionPragmas notEmpty
 ]
 
-{ #category : #'C code generation' }
-RustMethod >> emitCLocalsOn: aStream generator: aCodeGen [
-	"Emit a C function header for this method onto the given stream."
-
-	| volatileVariables maybeExternFunctions |
-	volatileVariables := properties includesKey: #volatile.
-	self refersToGlobalStruct ifTrue:
-		[aStream
-			next: 3 put: Character space; "there's already an opening ${ on this line; see sender"
-			nextPutAll: (volatileVariables
-						ifTrue: ['DECL_MAYBE_VOLATILE_SQ_GLOBAL_STRUCT']
-						ifFalse: ['DECL_MAYBE_SQ_GLOBAL_STRUCT'])].
-	aStream cr.
-	maybeExternFunctions := (declarations select: [:decl| decl beginsWith: 'extern']) keys.
-	(locals isEmpty and: [maybeExternFunctions isEmpty]) ifFalse:
-		[(aCodeGen sortStrings: locals, maybeExternFunctions) do:
-			[ :var | | decl |
-			decl := self declarationAt: var.
-			(volatileVariables
-			 or: [(decl beginsWith: 'static')
-			 or: [(decl beginsWith: 'extern')
-			 or: [usedVariablesCache includes: var]]]) ifTrue:
-				[aStream next: 4 put: Character space.
-				 volatileVariables ifTrue:
-					[aStream nextPutAll: #volatile; space].
-				 aStream
-					nextPutAll: decl;
-					nextPut: $;;
-					cr]].
-		 aStream cr]
-]
-
 { #category : #'api - code generation' }
 RustMethod >> emitCodeOn: aStream level: aLevel generator: aCodeGenerator [
 	"Emit Rust code for this method onto the given stream.
@@ -655,10 +663,11 @@ RustMethod >> emitCodeOn: aStream level: aLevel generator: aCodeGenerator [
 	
 	bodyStream := ReadWriteStream on: (ByteString new: 128).
 	aCodeGenerator "Generation will note used variables in usedVariablesCache"
-		pushScope: declarations
+		pushScope: self declarations
 		while: [ parseTree emitCCodeOn: bodyStream level: aLevel + 1 generator: aCodeGenerator ].
 
-	self emitCLocalsOn: aStream generator: aCodeGenerator.
+	aStream cr.
+	self emitLocalsOn: aStream level: aLevel + 1 generator: aCodeGenerator.
 	usedVariablesCache := nil.
 	aStream nextPutAll: bodyStream contents.
 	aStream tab: aLevel; nextPut: $}.
@@ -699,7 +708,7 @@ RustMethod >> emitFunctionPrototype: aStream level: aLevel generator: aCodeGen i
 	returnTypeIsFunctionPointer := returnType isPointer.
 
 	export 
-		ifTrue: [ aStream nextPutAll: '#[no_mangle]' ]
+		ifTrue: [ aStream tab: aLevel; nextPutAll: '#[no_mangle]'; cr ]
 		ifFalse: [
 			isPrototype ifFalse: [
 				inline = #always
@@ -720,7 +729,10 @@ RustMethod >> emitFunctionPrototype: aStream level: aLevel generator: aCodeGen i
 	args isEmpty
 		ifFalse: [
 			args
-				do: [ :eachArgument | aStream nextPutAll: (self declarationAt: eachArgument) ]
+				do: [ :eachArgument |
+					aStream nextPutAll: eachArgument.
+					aStream nextPutAll: ' : '.
+					aStream nextPutAll: (self declarationAt: eachArgument) variableType asRustTypeName ]
 				separatedBy: [ aStream nextPutAll: ', '] ].
 
 	aStream nextPut: $).
@@ -731,8 +743,8 @@ RustMethod >> emitFunctionPrototype: aStream level: aLevel generator: aCodeGen i
 				nextPutAll: ' -> ';
 				nextPutAll: returnType asRustTypeName. ].
 
-	(functionAttributes isNil or: [returnTypeIsFunctionPointer]) ifFalse:
-		[aStream space; nextPutAll: functionAttributes].
+	(functionAttributes isNil or: [ returnTypeIsFunctionPointer ]) ifFalse:
+		[ aStream space; nextPutAll: functionAttributes ].
 	isPrototype ifTrue: [aStream space] ifFalse: [].
 	returnTypeIsFunctionPointer ifFalse: [ ].
 
@@ -766,9 +778,37 @@ RustMethod >> emitInlineOn: aStream level: level generator: aCodeGen [
 	aCodeGen outputAsmLabel: selector on: aStream.
 	aStream crtab: level+1.
 	aCodeGen
-		pushScope: declarations
+		pushScope: self declarations
 		while: [parseTree emitCCodeOn: aStream level: level+1 generator: aCodeGen].
 	aStream tab: level; nextPut: $}
+]
+
+{ #category : #'api - code generation' }
+RustMethod >> emitLocalsOn: aStream level: aLevel generator: aCodeGen [
+	"Emit a C function header for this method onto the given stream."
+	| theVariableNames |
+
+	theVariableNames := Set withAll: locals, self declarationNames.
+
+	theVariableNames do: [ :eachVariableName |
+		| aDeclaration |
+
+		aDeclaration := self declarationAt: eachVariableName.
+		(usedVariablesCache includes: eachVariableName)
+			ifTrue: [
+				aStream
+					tab: aLevel;
+					nextPutAll: 'let ';
+					nextPutAll: aDeclaration variableName asString;
+					nextPutAll: ' : ';
+					nextPutAll: aDeclaration variableType asRustTypeName;
+					nextPut: $;;
+					cr ] ].
+	
+	"to have an empty line between method body and variable definitions"	
+	theVariableNames
+		ifNotEmpty: [ aStream cr ]
+	
 ]
 
 { #category : #'C code generation' }
@@ -848,8 +888,8 @@ RustMethod >> ensureToByDoLoopLimitIsSafeAndEfficient: node in: aCodeGen [
 				[| var |
 				 var := self unusedNamePrefixedBy: 'toDoLimit' avoiding: locals. "N.B. adds it to locals!!"
 				 node arguments: node args, {RustTVariableNode new setName: var; yourself}.
-				 declarations
-					at: node args third args first
+				 self
+					declarationAt: node args third args first
 					ifPresent: [:decl| self declarationAt: var put: (self typeFor: node args third args first in: aCodeGen), ' ', var]]]
 ]
 
@@ -939,10 +979,15 @@ RustMethod >> export: aBoolean [
 
 { #category : #initialization }
 RustMethod >> extraVariableName: root [
+	"Generate an extra variable with a given prefix.
+	Return a name of a new variable"
+	<return: #Symbol>
+
 	extraVariableNumber := extraVariableNumber
-								ifNil: [0]
-								ifNotNil: [extraVariableNumber + 1].
-	^root, extraVariableNumber printString
+		ifNil: [ 0 ]
+		ifNotNil: [ extraVariableNumber + 1 ].
+
+	^ (root, extraVariableNumber asString) asSymbol
 ]
 
 { #category : #transformations }
@@ -1156,24 +1201,6 @@ RustMethod >> functionAttributes: aString [
 	functionAttributes := aString
 ]
 
-{ #category : #'type inference' }
-RustMethod >> harmonizeSignedAndUnsignedTypesIn: aSetOfTypes [
-	"Eliminate signed/unsigned conflicts in aSetOfTypes"
-	| sqs usqs |
-	#(char short int #'unsigned char' #'unsigned short' #'unsigned int')
-		with: #(sqInt sqInt sqInt #usqInt #usqInt #usqInt)
-		do: [:type :replacement|
-			(aSetOfTypes includes: type) ifTrue:
-				[aSetOfTypes remove: type; add: replacement]].
-	sqs := aSetOfTypes select: [:t| t beginsWith: 'sq'].
-	usqs := aSetOfTypes select: [:t| t beginsWith: 'usq'].
-	^(sqs size + usqs size = aSetOfTypes size
-	   and: [sqs notEmpty
-	   and: [sqs allSatisfy: [:t| usqs includes: 'u', t]]])
-		ifTrue: [sqs]
-		ifFalse: [aSetOfTypes]
-]
-
 { #category : #'api - testing' }
 RustMethod >> hasConstantNamed: aName [
 	self
@@ -1181,6 +1208,13 @@ RustMethod >> hasConstantNamed: aName [
 		description: [ 'Must be a symbol' ].
 		
 	^ definingClass hasClassVarNamed: aName
+]
+
+{ #category : #'api - declarations' }
+RustMethod >> hasDeclarationAt: aVariableName [
+	<return: #Boolean>
+
+	^ self declarations hasDeclarationAt: aVariableName
 ]
 
 { #category : #'api - testing' }
@@ -1273,33 +1307,25 @@ RustMethod >> inferReturnTypeFromReturnsIn: aCodeGen [
 	aCodeGen maybeBreakForTestToInline: selector in: self.
 
 	(returnType isNotNil and: [ returnType isUnknown not ])
-		ifTrue: [ ^self ].
+		ifTrue: [ ^ self ].
 
 	aCodeGen
-		pushScope: declarations
-		while:
-			[| hasReturn returnTypes |
-			 hasReturn := false.
-			 returnTypes := Set new.
-			 "Debug:
-			 (| rettypes |
-			  rettypes := Dictionary new.
-			  parseTree nodesDo:
-				[:node|
-				node isReturn ifTrue:
-					[| types |
-					 self addTypesFor: node expression to: (types := Set new) in: aCodeGen.
-					 rettypes at: node expression put: types]].
-			  rettypes)"
-			 parseTree nodesDo:
-				[:node|
-				node isReturn ifTrue:
-					[hasReturn := true.
-					 "If we encounter a send of an as-yet-untyped method then abort,
-					  retrying and computing the type when that method is fully typed."
-					 (self addTypesFor: node expression to: returnTypes in: aCodeGen) ifTrue:
-						[^self]]].
-			returnTypes remove: #implicit ifAbsent: [].
+		pushScope: self declarations
+		while: [
+			| hasReturn returnTypes |
+			hasReturn := false.
+			returnTypes := Set new.
+			parseTree nodesDo: [ :node |
+				node isReturn ifTrue: [
+					hasReturn := true.
+					"If we encounter a send of an as-yet-untyped method then abort,
+					retrying and computing the type when that method is fully typed."
+					(self addReturnTypesFor: node expression to: returnTypes in: aCodeGen)
+						ifTrue: [ ^self ] ] ].
+				
+			"implicit is for typed self"
+			returnTypes remove: #implicit ifAbsent: [ ].
+			
 			returnTypes := aCodeGen harmonizeReturnTypesIn: returnTypes.
 			hasReturn
 				ifTrue: [
@@ -1315,10 +1341,9 @@ RustMethod >> inferReturnTypeFromReturnsIn: aCodeGen [
 							self error: message.
 							aCodeGen logger ensureCr; show: message ].
 						
-					 returnTypes size = 1 ifTrue:
-						[ self returnType: returnTypes anyOne ] ]
-				ifFalse:
-					[self returnType: (aCodeGen implicitReturnTypeFor: selector)]]
+					 returnTypes size = 1
+						ifTrue: [ self returnType: returnTypes anyOne ] ]
+				ifFalse: [ self returnType: (aCodeGen implicitReturnTypeFor: selector) ] ]
 ]
 
 { #category : #'type inference' }
@@ -1335,59 +1360,73 @@ RustMethod >> inferReturnTypeIn: aCodeGen [
 { #category : #'type inference' }
 RustMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 	"infer types for untyped variables from assignments and arithmetic uses.
-	 For debugging answer a Dictionary from var to the nodes that determined types
-	 This for debugging:
-		(self copy inferTypesForImplicitlyTypedVariablesIn: aCodeGen)"
-	| alreadyExplicitlyTypedOrNotToBeTyped asYetUntyped mustBeSigned newDeclarations effectiveNodes |
+	 For debugging answer a Dictionary from var to the nodes that determined types"
+	| alreadyExplicitlyTypedOrNotToBeTyped asYetUntyped mustBeSigned newDeclarations |
+
 	aCodeGen maybeBreakForTestToInline: selector in: self.
-	alreadyExplicitlyTypedOrNotToBeTyped := declarations keys asSet.
+	
+	alreadyExplicitlyTypedOrNotToBeTyped := self declarationNames.
+	
 	asYetUntyped := locals copyWithoutAll: alreadyExplicitlyTypedOrNotToBeTyped.
 	mustBeSigned := Set new.
-	newDeclarations := Dictionary new.
-	effectiveNodes := Dictionary new. "this for debugging"
-	parseTree nodesDo:
-		[:node| | type var |
+	newDeclarations := RustDeclarations new.
+
+	parseTree nodesDo: [ :eachNode |
+		| aVariableName eachVariableType  |
+		
 		"If there is something of the form i >= 0, then i should be signed, not unsigned."
-		(node isSend
-		 and: [(locals includes: (var := node receiver variableNameOrNil))
-		 and: [(#(<= < >= >) includes: node selector)
-		 and: [node args first isConstant
-		 and: [node args first value = 0]]]]) ifTrue:
-			[mustBeSigned add: var.
-			 effectiveNodes at: var put: { #signed. node }, (effectiveNodes at: var ifAbsent: [#()])].
+		(eachNode isSend
+			and: [ eachNode receiver variableNameOrNil isNotNil
+			and: [(locals includes: (aVariableName := eachNode receiver variableNameOrNil asSymbol))
+			and: [(#(<= < >= >) includes: eachNode selector)
+			and: [ eachNode args first isConstant
+			and: [ eachNode args first value = 0 ]]]]])
+				ifTrue: [ mustBeSigned add: aVariableName ].
+
 		"if an assignment to an untyped local of a known type, set the local's type to that type.
 		 Only observe known sends (methods in the current set) and typed local variables."
-		(node isAssignment
-		 and: [(locals includes: (var := node variable name))
-		 and: [(alreadyExplicitlyTypedOrNotToBeTyped includes: var) not]]) ifTrue: "don't be fooled by previously inferred types"
-		 	[type := node expression isSend
-						ifTrue: [aCodeGen returnTypeForSend: node expression in: self ifNil: nil]
-						ifFalse: [self typeFor: (node expression isAssignment
-													ifTrue: [node expression variable]
-													ifFalse: [node expression]) in: aCodeGen].
-			 type "If untyped, then cannot type the variable yet. A subsequent assignment may assign a subtype of what this type ends up being"
-				ifNil: "Further, if the type derives from an as-yet-untyped method, we must defer."
-					[alreadyExplicitlyTypedOrNotToBeTyped add: var.
-					 (node expression isSend
-					 and: [(aCodeGen methodNamed: node expression selector) notNil]) ifTrue:
-						[newDeclarations removeKey: var ifAbsent: nil]]
-				ifNotNil: "Merge simple types (but *don't* merge untyped vars); complex types must be defined by the programmer."
-					[(aCodeGen isSimpleType: type) ifTrue:
-						[(asYetUntyped includes: var)
-							ifTrue: [newDeclarations at: var put: type. asYetUntyped remove: var]
-							ifFalse:
-								[aCodeGen mergeTypeOf: var in: newDeclarations with: type method: self].
-						 effectiveNodes at: var put: { newDeclarations at: var. node }, (effectiveNodes at: var ifAbsent: [#()])]]]].
-	mustBeSigned do:
-		[:var|
-		 (newDeclarations at: var ifAbsent: nil) ifNotNil:
-			[:decl| | type |
-			 type := aCodeGen extractTypeFor: var fromDeclaration: decl.
-			 type first == $u ifTrue:
-				[newDeclarations at: var put: (aCodeGen signedTypeForIntegralType: type), ' ', var]]].
-	newDeclarations keysAndValuesDo:
-		[:var :decl| declarations at: var put: decl].
-	^effectiveNodes
+		(eachNode isAssignment
+			and: [ (locals includes: (aVariableName := eachNode variable name asSymbol))
+			and: [ (alreadyExplicitlyTypedOrNotToBeTyped includes: aVariableName) not ] ])
+				"don't be fooled by previously inferred types"
+				ifTrue: [
+					eachVariableType := eachNode expression isSend
+						ifTrue: [ aCodeGen returnTypeForSend: eachNode expression in: self ifNil: nil ]
+						ifFalse: [
+							self
+								typeFor: (
+									eachNode expression isAssignment
+										ifTrue: [ eachNode expression variable ]
+										ifFalse: [ eachNode expression ])
+								in: aCodeGen ].
+					"If untyped, then cannot type the variable yet.
+					A subsequent assignment may assign a subtype of what this type ends up being"
+					eachVariableType
+						"Further, if the type derives from an as-yet-untyped method, we must defer."
+						ifNil: [
+							alreadyExplicitlyTypedOrNotToBeTyped add: aVariableName.
+							(eachNode expression isSend
+								and: [ (aCodeGen methodNamed: eachNode expression selector) notNil ])
+									ifTrue:
+									[ newDeclarations removeDeclarationAt: aVariableName ] ]
+						
+						"Merge simple types (but *don't* merge untyped vars); complex types must be defined by the programmer."
+						ifNotNil: [
+							(aCodeGen isSimpleType: eachVariableType)
+								ifTrue: [
+									(asYetUntyped includes: aVariableName)
+									ifTrue: [
+										newDeclarations addDeclaration: (RustDeclaration name: aVariableName type: eachVariableType).
+										asYetUntyped remove: aVariableName]
+									ifFalse: [ aCodeGen mergeTypeOf: aVariableName in: newDeclarations with: eachVariableType method: self ] ]] ] ].
+
+	"convert all declarations with unsigned type to signed type if it is necessary"
+	mustBeSigned do: [ :eachVariableName |
+		 newDeclarations
+			declarationAt: eachVariableName
+			ifPresent: [ :eachDeclaration | eachDeclaration beSigned ] ].
+
+	newDeclarations declarationsDo: [ :eachDeclaration | self addDeclaration: eachDeclaration ]
 ]
 
 { #category : #accessing }
@@ -1765,8 +1804,8 @@ RustMethod >> instVarGetExprFor: varName offset: instIndex [
 
 	| exprList decl stmtList |
 	exprList := OrderedCollection new.
-	(declarations includesKey: varName) ifTrue: [
-		decl := declarations at: varName.
+	(self hasDeclarationAt: varName) ifTrue: [
+		decl := self declarationAt: varName.
 		(decl includes: $*) ifTrue: [  "array"
 			exprList add:
 				(varName, ' := ', self vmNameString, ' fetchArray: ', instIndex printString, ' ofObject: rcvr').
@@ -1792,7 +1831,7 @@ RustMethod >> instVarPutExprFor: varName offset: instIndex [
 	"Return the parse tree for an expression that saves the value of the integer instance variable at the given offset."
 
 	| expr |
-	(declarations includesKey: varName) ifTrue: [
+	(self hasDeclarationAt: varName) ifTrue: [
 		self error: 'a primitive method can only modify integer instance variables'.
 	].
 	expr := '', self vmNameString, ' storeInteger: ', instIndex printString, ' ofObject: rcvr withValue: ', varName.
@@ -2144,32 +2183,32 @@ RustMethod >> mustBeInlined [
 { #category : #'instance creation' }
 RustMethod >> newCascadeTempFor: aTParseNode [
 	| varName varNode |
+
 	varName := self extraVariableName: 'cascade'.
 	varNode := RustTVariableNode new setName: varName.
-	aTParseNode isLeaf ifFalse:
-		[self
-			declarationAt: varName
-			put: [:tm :cg| | type |
-				type := tm determineTypeFor: aTParseNode in: cg.
-				(VMStructType structTargetKindForType: type) == #struct ifTrue:
-					["can't copy structs into cascade temps; the struct is not updated.
-					  must change to a pointer."
-					type := type, ' *'.
-					parseTree nodesDo:
-						[:node|
-						(node isAssignment
-						 and: [node variable name = varName]) ifTrue:
-							[node setExpression: (RustTSendNode new
-													setSelector: #addressOf:
-													receiver: (RustTVariableNode new setName: 'self')
-													arguments: {node expression})]]].
+	
+	aTParseNode isLeaf
+		ifTrue: [ ^ varNode ].
+
+	self
+		declarationAt: varName
+		put: [ :tm :cg |
+			| type |
+			type := tm determineTypeFor: aTParseNode in: cg.
+			(VMStructType structTargetKindForType: type) == #struct ifTrue:
+				["can't copy structs into cascade temps; the struct is not updated.
+				  must change to a pointer."
+				type := type, ' *'.
+				parseTree nodesDo:
+					[:node|
+					(node isAssignment
+					 and: [node variable name = varName]) ifTrue:
+						[node setExpression: (RustTSendNode new
+												setSelector: #addressOf:
+												receiver: (RustTVariableNode new setName: 'self')
+												arguments: {node expression})]].
 				type]].
 	^varNode
-]
-
-{ #category : #accessing }
-RustMethod >> newDeclarations: aDictionary [
-	declarations := aDictionary
 ]
 
 { #category : #utilities }
@@ -2249,16 +2288,13 @@ RustMethod >> prepareMethodIn: aCodeGen [
 	 Declare limit variables for to:[by:]do: loops with limits that potentially have side-effects.
 	 As a hack also update the types of variables introduced to implement cascades correctly.
 	 This has to be done at the same time as this is done, so why not piggy back here?"
-	extraVariableNumber ifNotNil:
-		[declarations keysAndValuesDo:
-			[:varName :decl|
-			decl isBlock ifTrue:
-				[self assert: ((varName beginsWith: 'cascade') and: [varName last isDigit]).
-				 locals add: varName.
-				 self declarationAt: varName
-					put: (decl value: self value: aCodeGen), ' ', varName]]].
+	
+	"implement support for temporary cascade variables"
+	extraVariableNumber ifNotNil: [ self halt ].
+	
+	
 	aCodeGen
-		pushScope: declarations
+		pushScope: self declarations
 		while:"N.B.  nodesWithParentsDo: is bottom-up, hence replacement is destructive and conserved."
 			[parseTree nodesWithParentsDo:
 				[:node :parent|
@@ -2493,16 +2529,15 @@ RustMethod >> recordDeclarationsIn: aCCodeGen [
 			[:pragma|
 			pragma keyword == #var:declareC: ifTrue:
 				[self checkedDeclarationAt: pragma arguments first asString
-					put: pragma arguments last
+					put: (aCCodeGen typeFromString: pragma arguments last)
 					in: aCCodeGen].
 			pragma keyword == #var:type: ifTrue:
 				[| varName varType |
 				varName := pragma arguments first asString.
-				varType := aCCodeGen conventionalTypeForType: pragma arguments last.
-				varType last == $* ifFalse: [varType := varType, ' '].
+				varType := aCCodeGen typeFromString: pragma arguments last.
 				self checkedDeclarationAt: varName
-					put: varType, varName
-					in: aCCodeGen].
+					put: varType
+					in: aCCodeGen ].
 			pragma keyword = #returnTypeC: ifTrue:
 				[self returnType: pragma arguments last].
 			pragma keyword = #doNotGenerate: ifTrue:
@@ -2544,6 +2579,12 @@ RustMethod >> refersToGlobalStruct [
 { #category : #transformations }
 RustMethod >> removeAssertions [
 	parseTree removeAssertions
+]
+
+{ #category : #'api - declarations' }
+RustMethod >> removeDeclarationAt: aVariableName [
+
+	self declarations removeDeclarationAt: aVariableName
 ]
 
 { #category : #transformations }
@@ -2690,7 +2731,7 @@ RustMethod >> renameVariablesUsing: aDictionary [
 							ifTrue: [decl copyReplaceFrom: index to: index + oldName size - 1 with: newName]
 							ifFalse: [decl])]
 			ifNil: [newDecls at: oldName put: decl]].
-	self newDeclarations: newDecls.
+	self declarations: newDecls.
 
 	newProperties := properties copy.
 	newProperties pragmas do:
@@ -2806,7 +2847,7 @@ RustMethod >> setSelector: sel definingClass: class args: argList locals: localL
 	definingClass := class.
 	args := argList asOrderedCollection collect: [:arg | arg key].
 	locals := (localList collect: [:arg | arg key]) asSet.
-	declarations := Dictionary new.
+	declarations := RustDeclarations new.
 	self addTypeForSelf.
 	primitive := aNumber.
 	properties := methodProperties.
@@ -3134,8 +3175,8 @@ RustMethod >> tryToInlineMethodExpressionsIn: aCodeGen [
 	| sendsToInline |
 	sendsToInline := Dictionary new: 100.
 	aCodeGen
-		pushScope: declarations
-		while: [parseTree
+		pushScope: self declarations
+		while: [ parseTree
 					nodesDo:
 						[:node|
 						(self inlineableFunctionCall: node in: aCodeGen) ifTrue:
@@ -3237,17 +3278,19 @@ RustMethod >> typeFor: aVariable in: aCodeGen [
 	 cCodeGen to answer nil for variables without types. nil for typelessness is required
 	 by the type propagation logic in inlineSend:directReturn:exitVar:in:."
 	| varName |
-	varName := aVariable asString.
-	^ (declarations
-			at: varName
-			ifAbsent: [
-				(args includes: varName) "arg types default to sqInt"
-					ifTrue: ['sqInt ', varName]
-					ifFalse: [
-						(locals includes: varName)
-							ifFalse: [ aCodeGen typeOfVariable: varName ] ] ])
-		ifNotNil: [ :decl | aCodeGen extractTypeFor: varName fromDeclaration: decl ]
-		ifNil: [ RustUnknownType new ]
+
+	varName := aVariable name asSymbol.
+
+	^ self
+		declarationAt: varName
+		ifPresent: [ :aDeclaration | aCodeGen extractTypeFor: varName fromDeclaration: aDeclaration ]
+		ifAbsent: [
+			(args includes: varName)
+				ifTrue: [ RustUnknownType new ]
+				ifFalse: [
+					(locals includes: varName)
+						ifTrue: [ RustUnknownType new ]
+						ifFalse: [ aCodeGen typeOfVariable: varName ] ] ]
 ]
 
 { #category : #utilities }

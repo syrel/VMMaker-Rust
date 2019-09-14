@@ -44,6 +44,11 @@ RustNamedType >> name [
 ]
 
 { #category : #accessing }
-RustNamedType >> name: anObject [
-	name := anObject
+RustNamedType >> name: aSymbol [
+	
+	self
+		assert: [ aSymbol isSymbol ]
+		description: [ 'Must be a symbol' ].
+
+	name := aSymbol
 ]

@@ -15,6 +15,15 @@ RBVariableNode >> asRustTranslatorNodeIn: aTMethod [
 		ifTrue: [ ^ RustConstantReferenceNode new
 			definingClass: aTMethod definingClass;
 			setName: name asSymbol ].
+		
+	(Smalltalk environment
+		at: name asSymbol
+		ifPresent: [ :anObject |
+			anObject isClass
+				ifTrue: [
+					^ RustClassReferenceNode new
+						referencedClass: anObject;
+						setName: name asSymbol ] ]).
 
 	^ RustTVariableNode new setName: name
 ]

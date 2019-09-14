@@ -492,7 +492,7 @@ RustTParseNode >> structTargetKindIn: aCodeGen [
 { #category : #'type inference' }
 RustTParseNode >> typeFrom: aCodeGenerator in: aTMethod [
 	"This is the default type in case of doubt"
-	^(self typeOrNilFrom: aCodeGenerator in: aTMethod) ifNil: [#sqInt]
+	^(self typeOrNilFrom: aCodeGenerator in: aTMethod) ifNil: [ RustUnknownType new ]
 ]
 
 { #category : #'type inference' }

@@ -47,6 +47,11 @@ RustUnknownType >> asRustTypeName [
 RustUnknownType >> assertValueType: anObject [
 ]
 
+{ #category : #arithmetic }
+RustUnknownType >> bitAnd: anotherType [
+	^ RustUnknownType new
+]
+
 { #category : #testing }
 RustUnknownType >> isSimple [
 	^ false

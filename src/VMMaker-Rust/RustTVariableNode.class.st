@@ -41,6 +41,11 @@ RustTVariableNode >> hasSideEffect [
 ]
 
 { #category : #testing }
+RustTVariableNode >> isClassReference [
+	^ false
+]
+
+{ #category : #testing }
 RustTVariableNode >> isLeaf [
 
 	^true

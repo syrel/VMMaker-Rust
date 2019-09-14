@@ -24,6 +24,20 @@ RustExampleLocation class >> rustInstanceVariableDeclariation [
 	}
 ]
 
+{ #category : #converting }
+RustExampleLocation >> asPoint [
+	| x y point |
+	
+	x := self x.
+	y := self y.
+
+	point := RustExamplePoint new.
+	point x: x.
+	point y: y.
+	
+	^ point
+]
+
 { #category : #accessing }
 RustExampleLocation >> latitude [
 	^ latitude

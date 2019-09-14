@@ -1545,15 +1545,20 @@ RustCodeGenerator >> exportedPrimitiveNames [
 RustCodeGenerator >> extractTypeFor: aVariable fromDeclaration: aVariableDeclaration [
 	"Eliminate inessentials from aVariableDeclaration to answer a C type without the variable,
 	 or initializations etc"
-	| decl |
+	"| decl |
 	((aVariableDeclaration beginsWith: 'static ')
 	 or: [aVariableDeclaration beginsWith: 'extern ']) ifTrue:
 		[^self extractTypeFor: aVariable fromDeclaration: (aVariableDeclaration allButFirst: 7)].
 	decl := (aVariableDeclaration indexOf: $= ifAbsent: [])
 				ifNotNil: [:index| aVariableDeclaration copyFrom: 1 to: index - 1]
 				ifNil: [aVariableDeclaration].
-	decl := decl copyReplaceAll: aVariable with: '' tokenish: [:ch| ch = $_ or: [ch isAlphaNumeric]].
-	^self baseTypeForType: decl
+	decl := decl copyReplaceAll: aVariable with: '' tokenish: [:ch| ch = $_ or: [ch isAlphaNumeric]]."
+	
+	self
+		assert: [ aVariableDeclaration isKindOf: RustDeclaration ]
+		description: [ 'Must be declaration' ].
+
+	^ aVariableDeclaration variableType
 ]
 
 { #category : #'C code generator' }
@@ -2799,7 +2804,7 @@ RustCodeGenerator >> generatePlus: msgNode on: aStream indent: level [
 	
 	aReceiverType := self typeFor: msgNode receiver in: currentMethod.
 	anArgumentType := self typeFor: msgNode args first in: currentMethod.
-	aCommonType := aReceiverType * anArgumentType.
+	aCommonType := aReceiverType + anArgumentType.
 
 	shouldCast := (aReceiverType sameAs: anArgumentType) not
 		or: [ (aReceiverType isInteger and: [ anArgumentType isFloat ])
@@ -4549,7 +4554,7 @@ RustCodeGenerator >> optionIsTrue: pragma in: aClass [
 		[^true].
 
 	"If the option is the name of a subclass of Cogit, include it if it inherits from the Cogit class."
-	(Smalltalk classNamed: key) ifNotNil:
+	(Smalltalk classNamed: key asString) ifNotNil:
 		[:optionClass|
 		 aClass cogitClass ifNotNil:
 			[:cogitClass|
@@ -4834,9 +4839,9 @@ RustCodeGenerator >> pruneUnreachableMethods [
 ]
 
 { #category : #'C code generator' }
-RustCodeGenerator >> pushScope: variableToType "<Dictionary>" while: aBlock [
-	scopeStack addLast: variableToType.
-	^aBlock ensure: [scopeStack removeLast]
+RustCodeGenerator >> pushScope: theDeclarations while: aBlock [
+	scopeStack addLast: theDeclarations.
+	^ aBlock ensure: [ scopeStack removeLast ]
 ]
 
 { #category : #'C code generator' }
@@ -5133,6 +5138,7 @@ RustCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
 		ifAbsent:
 			[sel
 				caseOf: {
+				[#new] ->	[ self typeForNew: sendNode in: aTMethod ].
 				[#integerValueOf:]		->	[#sqInt].
 				[#isIntegerObject:]		->	[#int].
 				[#negated]				->	[self promoteArithmeticTypes: (sendNode receiver typeFrom: self in: aTMethod) and: #int].
@@ -5647,16 +5653,58 @@ RustCodeGenerator >> typeForDereference: sendNode in: aTMethod [
 	^#sqInt
 ]
 
+{ #category : #'type inference' }
+RustCodeGenerator >> typeForNew: sendNode in: aTMethod [
+	<return: #RustTypedValue>
+	| aReceiver |
+
+	aReceiver := sendNode receiver.
+	^ aReceiver typeOrNilFrom: self in: aTMethod
+]
+
+{ #category : #'api - type inference' }
+RustCodeGenerator >> typeFromString: aString [
+	<return: #RustTypedValue>
+	| aTypeSymbol |
+	
+	aTypeSymbol := aString withBlanksTrimmed asSymbol.
+	
+	aTypeSymbol = #double
+		ifTrue: [ ^ RustFloat64 new ].
+		
+	aTypeSymbol = #sqLong
+		ifTrue: [ ^ RustInt64 new ].
+		
+	aTypeSymbol = #usqInt
+		ifTrue: [ ^ RustInt32 new ].
+		
+	aTypeSymbol = #'sqInt *'
+		ifTrue: [ ^ RustNamedType new name: aTypeSymbol ].
+		
+	aTypeSymbol = #'void *'
+		ifTrue: [ ^ RustNamedType new name: aTypeSymbol ].
+		
+	(aTypeSymbol = #'char*' or: [ aTypeSymbol = #'char *' ])
+		ifTrue: [ ^ RustString new ].
+	
+	^ RustNamedType new name: aTypeSymbol	
+	
+	"self error: ('Unknown type {1}' format: { aString })"
+]
+
 { #category : #'C code generator' }
-RustCodeGenerator >> typeOfVariable: varName [ "<String>"
-	self assert: varName isString.
+RustCodeGenerator >> typeOfVariable: varName [ "<Symbol>"
+	self
+		assert: [ varName isSymbol ]
+		description: [ 'Name must be a symbol' ].
 
 	scopeStack reverseDo:
-		[:dict|
-		(dict includesKey: varName) ifTrue:
-			[^self
-				extractTypeFor: varName
-				fromDeclaration: (dict at: varName)]].
+		[ :theDeclarations |
+		(theDeclarations hasDeclarationAt: varName)
+			ifTrue: [
+				^ self
+					extractTypeFor: varName
+					fromDeclaration: (theDeclarations declarationAt: varName)]].
 	(variableDeclarations
 		at: varName
 		ifAbsent:
@@ -5678,8 +5726,8 @@ RustCodeGenerator >> typeOfVariable: varName in: aMethod [
 	<return: #RustTypedValue>
 
 	self
-		assert: varName isString
-		description: [ 'Variable name must be a string' ].
+		assert: [ varName isSymbol ]
+		description: [ 'Variable name must be a symbol' ].
 
 	(aMethod structure hasInstanceVariableNamed: varName asSymbol)
 		ifTrue: [ ^ (aMethod structure variableNamed: varName asSymbol) type ].
@@ -5689,10 +5737,10 @@ RustCodeGenerator >> typeOfVariable: varName in: aMethod [
 
 	scopeStack reverseDo:
 		[:dict|
-		(dict includesKey: varName) ifTrue:
+		(dict hasDeclarationAt: varName) ifTrue:
 			[^self
 				extractTypeFor: varName
-				fromDeclaration: (dict at: varName)]].
+				fromDeclaration: (dict declarationAt: varName)]].
 	(variableDeclarations
 		at: varName
 		ifAbsent:

@@ -16,6 +16,16 @@ RustInteger >> isInteger [
 	^ true
 ]
 
+{ #category : #testing }
+RustInteger >> isSigned [
+	^ false
+]
+
+{ #category : #testing }
+RustInteger >> isUnsigned [
+	^ false
+]
+
 { #category : #'as yet unclassified' }
 RustInteger >> largerType [
 	"Return a larger type of me if possible"
