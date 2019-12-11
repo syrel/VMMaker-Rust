@@ -21,8 +21,7 @@ RustTStmtListNode >> addReadBeforeAssignedIn: variables to: readBeforeAssigned a
 			(node isVariable
 			 and: [(variables includes: node name)
 			 and: [(assigned includes: node name) not
-			 and: [(#(nil pointer) includes: (node structTargetKindIn: aCodeGen))
-			 and: [(parent notNil and: [parent isAssignment and: [parent variable == node]]) not]]]]) ifTrue:
+			 and: [(parent notNil and: [parent isAssignment and: [parent variable == node]]) not]]]) ifTrue:
 				[node name = 'theCalloutState' ifTrue:
 					[self halt].
 				 readBeforeAssigned add: node name]]

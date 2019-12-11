@@ -2,17 +2,17 @@ Class {
 	#name : #RustMethod,
 	#superclass : #Object,
 	#instVars : [
-		'args',
+		'arguments',
+		'locals',
+		'declarations',
 		'comment',
 		'complete',
-		'declarations',
 		'definingClass',
 		'export',
 		'extraVariableNumber',
 		'globalStructureBuildMethodHasFoo',
 		'inline',
 		'labels',
-		'locals',
 		'parseTree',
 		'primitive',
 		'properties',
@@ -254,8 +254,9 @@ RustMethod >> argConversionExprFor: varName stackIndex: stackIndex [
 { #category : #accessing }
 RustMethod >> args [
 	"The arguments of this method."
+	<return: #RustLocalDeclarations>
 
-	^args
+	^ arguments
 ]
 
 { #category : #converting }
@@ -376,15 +377,17 @@ RustMethod >> checkSuccessExpr [
 
 { #category : #accessing }
 RustMethod >> checkedDeclarationAt: aVariableName put: aDeclaration in: aCCodeGen [
-	((args includes: aVariableName)
-	 or: [(locals includes: aVariableName)
+	((arguments hasDeclarationAt: aVariableName)
+	 or: [(locals hasDeclarationAt: aVariableName)
 	 or: [(definingClass instVarIndexFor: aVariableName asString ifAbsent: nil) notNil ]]) ifFalse:
-		[| msg |
+		[
+		| msg |
 		 msg := definingClass name, '>>', selector, ' contains declaration for non-existent variable ', aVariableName.
 		 aCCodeGen
 			ifNotNil: [aCCodeGen logger show: msg; cr]
 			ifNil: [self error: msg]].
-	^self declarationAt: aVariableName asSymbol put: aDeclaration
+
+	^ self declarationAt: aVariableName asSymbol put: aDeclaration
 ]
 
 { #category : #accessing }
@@ -438,8 +441,7 @@ RustMethod >> computePossibleSideEffectsInto: writtenToVars visited: visitedSele
 				ifTrue:
 					[writtenToVars add: node variable name].
 			(node isSend
-			 and: [node isBuiltinOperator not
-			 and: [(aCodeGen isStructSend: node) not]]) ifTrue:
+			 and: [node isBuiltinOperator not]) ifTrue:
 				[(aCodeGen methodNamed: node selector) ifNotNil:
 					[:method|
 					 method
@@ -619,9 +621,9 @@ RustMethod >> emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: i
 		nextPutAll: (aCodeGen cFunctionNameFor: selector);
 		nextPut: $(.
 	
-	args isEmpty
+	arguments isEmpty
 		ifFalse: [
-			args
+			arguments
 				do: [ :eachArgument | aStream nextPutAll: (self declarationAt: eachArgument) ]
 				separatedBy: [ aStream nextPutAll: ', '] ].
 
@@ -724,15 +726,15 @@ RustMethod >> emitFunctionPrototype: aStream level: aLevel generator: aCodeGen i
 
 	self isInstanceSide ifTrue: [
 		aStream nextPutAll: '&self'.
-		args ifNotEmpty: [ aStream nextPutAll: ', ' ]. ].
+		arguments ifNotEmpty: [ aStream nextPutAll: ', ' ]. ].
 
-	args isEmpty
+	arguments isEmpty
 		ifFalse: [
-			args
-				do: [ :eachArgument |
-					aStream nextPutAll: eachArgument.
+			arguments
+				do: [ :eachDeclaration |
+					aStream nextPutAll: eachDeclaration variableName.
 					aStream nextPutAll: ' : '.
-					aStream nextPutAll: (self declarationAt: eachArgument) variableType asRustTypeName ]
+					aStream nextPutAll: (self declarationAt: eachDeclaration variableName) variableType asRustTypeName ]
 				separatedBy: [ aStream nextPutAll: ', '] ].
 
 	aStream nextPut: $).
@@ -788,7 +790,7 @@ RustMethod >> emitLocalsOn: aStream level: aLevel generator: aCodeGen [
 	"Emit a C function header for this method onto the given stream."
 	| theVariableNames |
 
-	theVariableNames := Set withAll: locals, self declarationNames.
+	theVariableNames := Set withAll: locals declarationNames, self declarationNames.
 
 	theVariableNames do: [ :eachVariableName |
 		| aDeclaration |
@@ -821,10 +823,10 @@ RustMethod >> emitProxyFunctionPrototype: aStream generator: aCodeGen [
 		nextPutAll: '(*';
 		nextPutAll: (aCodeGen cFunctionNameFor: selector);
 		nextPutAll: ')('.
-	args isEmpty
+	arguments isEmpty
 		ifTrue: [aStream nextPutAll: #void]
 		ifFalse:
-			[args
+			[arguments
 				do: [:arg| aStream nextPutAll: (self declarationAt: arg)]
 				separatedBy: [ aStream nextPutAll: ', ' ]].
 	aStream nextPut: $)
@@ -876,8 +878,7 @@ RustMethod >> ensureToByDoLoopLimitIsSafeAndEfficient: node in: aCodeGen [
 	 hasSideEffects := limitExpr anySatisfy:
 						[:subNode|
 						subNode isSend
-						and: [(aCodeGen isBuiltinSelector: subNode selector) not
-						and: [(aCodeGen isStructSend: subNode) not]]].
+						and: [(aCodeGen isBuiltinSelector: subNode selector) not]].
 	 node args size = 4
 		ifTrue:
 			[hasSideEffects
@@ -1093,14 +1094,14 @@ RustMethod >> extractSharedCase [
 
 	self extractDirective: #sharedCodeNamed:inCase:
 		valueBlock: [:sendNode|
-			args isEmpty ifFalse:
+			arguments isEmpty ifFalse:
 				[self error: 'Cannot share code sections in methods with arguments'].
 			sharedLabel := sendNode args first value.
 			sharedCase := sendNode args last value]
 		default: nil.
 	self extractDirective: #sharedCodeInCase:
 		valueBlock: [:sendNode|
-			args isEmpty ifFalse:
+			arguments isEmpty ifFalse:
 				[self error: 'Cannot share code sections in methods with arguments'].
 			sharedLabel := selector.
 			sharedCase := sendNode args last value]
@@ -1127,7 +1128,7 @@ RustMethod >> fetchRcvrExpr [
 	"Return the parse tree for an expression that fetches the receiver from the stack."
 
 	| expr |
-	expr := 'rcvr := ', self vmNameString, ' stackValue: (', args size printString, ')'.
+	expr := 'rcvr := ', self vmNameString, ' stackValue: (', arguments size printString, ')'.
 	^ self statementsFor: expr varName: ''
 
 ]
@@ -1185,7 +1186,7 @@ RustMethod >> freeVariableReferences [
 	parseTree nodesDo: [ :node |
 		node isVariable ifTrue: [ refs add: node name asString ].
 	].
-	args do: [ :var | refs remove: var asString ifAbsent: [] ].
+	arguments do: [ :var | refs remove: var asString ifAbsent: [] ].
 	locals do: [ :var | refs remove: var asString ifAbsent: [] ].
 	#('self' 'nil' 'true' 'false') do: [ :var | refs remove: var ifAbsent: [] ].
 	^refs
@@ -1306,7 +1307,7 @@ RustMethod >> inferReturnTypeFromReturnsIn: aCodeGen [
 	
 	aCodeGen maybeBreakForTestToInline: selector in: self.
 
-	(returnType isNotNil and: [ returnType isUnknown not ])
+	returnType isUnknown not
 		ifTrue: [ ^ self ].
 
 	aCodeGen
@@ -1361,13 +1362,13 @@ RustMethod >> inferReturnTypeIn: aCodeGen [
 RustMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 	"infer types for untyped variables from assignments and arithmetic uses.
 	 For debugging answer a Dictionary from var to the nodes that determined types"
-	| alreadyExplicitlyTypedOrNotToBeTyped asYetUntyped mustBeSigned newDeclarations |
+	| alreadyExplicitlyTypedOrNotToBeTyped asYetUntypedDeclarations mustBeSigned newDeclarations |
 
 	aCodeGen maybeBreakForTestToInline: selector in: self.
 	
 	alreadyExplicitlyTypedOrNotToBeTyped := self declarationNames.
 	
-	asYetUntyped := locals copyWithoutAll: alreadyExplicitlyTypedOrNotToBeTyped.
+	asYetUntypedDeclarations := locals copyWithoutAllNamed: alreadyExplicitlyTypedOrNotToBeTyped.
 	mustBeSigned := Set new.
 	newDeclarations := RustDeclarations new.
 
@@ -1377,7 +1378,7 @@ RustMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 		"If there is something of the form i >= 0, then i should be signed, not unsigned."
 		(eachNode isSend
 			and: [ eachNode receiver variableNameOrNil isNotNil
-			and: [(locals includes: (aVariableName := eachNode receiver variableNameOrNil asSymbol))
+			and: [(locals hasDeclarationAt: (aVariableName := eachNode receiver variableNameOrNil asSymbol))
 			and: [(#(<= < >= >) includes: eachNode selector)
 			and: [ eachNode args first isConstant
 			and: [ eachNode args first value = 0 ]]]]])
@@ -1386,7 +1387,7 @@ RustMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 		"if an assignment to an untyped local of a known type, set the local's type to that type.
 		 Only observe known sends (methods in the current set) and typed local variables."
 		(eachNode isAssignment
-			and: [ (locals includes: (aVariableName := eachNode variable name asSymbol))
+			and: [ (locals hasDeclarationAt: (aVariableName := eachNode variable name asSymbol))
 			and: [ (alreadyExplicitlyTypedOrNotToBeTyped includes: aVariableName) not ] ])
 				"don't be fooled by previously inferred types"
 				ifTrue: [
@@ -1414,10 +1415,10 @@ RustMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 						ifNotNil: [
 							(aCodeGen isSimpleType: eachVariableType)
 								ifTrue: [
-									(asYetUntyped includes: aVariableName)
+									(asYetUntypedDeclarations hasDeclarationAt: aVariableName)
 									ifTrue: [
 										newDeclarations addDeclaration: (RustDeclaration name: aVariableName type: eachVariableType).
-										asYetUntyped remove: aVariableName]
+										asYetUntypedDeclarations removeDeclarationAt: aVariableName]
 									ifFalse: [ aCodeGen mergeTypeOf: aVariableName in: newDeclarations with: eachVariableType method: self ] ]] ] ].
 
 	"convert all declarations with unsigned type to signed type if it is necessary"
@@ -1427,6 +1428,13 @@ RustMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 			ifPresent: [ :eachDeclaration | eachDeclaration beSigned ] ].
 
 	newDeclarations declarationsDo: [ :eachDeclaration | self addDeclaration: eachDeclaration ]
+]
+
+{ #category : #accessing }
+RustMethod >> initialize [
+	super initialize.
+	
+	returnType := RustUnknownType new
 ]
 
 { #category : #accessing }
@@ -1491,7 +1499,7 @@ RustMethod >> inlineCaseStatementBranchesIn: aCodeGen localizingVars: varsList [
 								addFirst: meth asInlineNode;
 								addFirst: (RustTLabeledCommentNode new setComment: meth selector).
 							stmtNode setStatements: newStatements]]]]]].
-	usedVars := (locals , args) asSet.
+	usedVars := (locals , arguments) asSet.
 	1 to: maxTemp do:
 		[:i |
 		v := 't' , i printString.
@@ -1552,7 +1560,7 @@ RustMethod >> inlineFunctionCall: aSendNode in: aCodeGen [
 	meth := (aCodeGen methodNamed: sel) copy.
 	meth ifNil:
 		[^self inlineBuiltin: aSendNode in: aCodeGen].
-	doNotRename := Set withAll: args.
+	doNotRename := Set withAll: arguments.
 	argsForInlining := aSendNode argumentsForInliningCodeGenerator: aCodeGen.
 	meth args with: argsForInlining do:
 		[ :argName :exprNode |
@@ -1951,7 +1959,7 @@ RustMethod >> isNode: aNode substitutableFor: argName inMethod: targetMeth in: a
 
 	aNode isVariable ifTrue:
 		[((locals includes: aNode name)
-		 or: [(args includes: aNode name)
+		 or: [(arguments includes: aNode name)
 		 or: [#('self' 'true' 'false' 'nil') includes: aNode name]]) ifTrue: [^true].
 		"We can substitute any variable provided it is only read in the method being inlined,
 		 and if it is not read after any non-trivial call (which may update the variable)."
@@ -2003,7 +2011,7 @@ RustMethod >> isNode: aNode substitutableFor: argName inMethod: targetMeth in: a
 			[(aCodeGen isNonArgumentImplicitReceiverVariableName: node name) ifFalse:
 				[constantExpression := false.
 				((locals includes: node name)
-				 or: [(args includes: node name)
+				 or: [(arguments includes: node name)
 				 or: [(#('self' 'true' 'false' 'nil') includes: node name)
 				 or: [targetMeth maySubstituteGlobal: node name in: aCodeGen]]]) ifFalse: [^false]]] ifFalse:
 		[^false]]]].
@@ -2058,7 +2066,7 @@ RustMethod >> isSubstitutableNode: aNode intoMethod: targetMeth in: aCodeGen [
 
 	aNode isVariable ifTrue: [
 		var := aNode name.
-		((locals includes: var) or: [args includes: var]) ifTrue: [ ^ true ].
+		((locals includes: var) or: [arguments includes: var]) ifTrue: [ ^ true ].
 		(#(self true false nil) includes: var) ifTrue: [ ^ true ].
 		(targetMeth maySubstituteGlobal: var in: aCodeGen) ifTrue: [ ^ true ].
 	].
@@ -2067,22 +2075,15 @@ RustMethod >> isSubstitutableNode: aNode intoMethod: targetMeth in: aCodeGen [
 	 with value[:value:*] messages though!"
 	aNode isStmtList ifTrue: [^true].
 
-	(aNode isSend
-	 and: [aNode numArgs = 0
-	 and: [aCodeGen isStructSend: aNode]]) ifTrue:
-		[^true].
-
 	"scan expression tree; must contain only constants, builtin ops, and inlineable vars"
 	aNode nodesDo: [ :node |
 		node isSend ifTrue: [
-			(node isBuiltinOperator
-			 or: [node numArgs = 0
-				 and: [aCodeGen isStructSend: node]]) ifFalse: [ ^false ].
+			(node isBuiltinOperator) ifFalse: [ ^false ].
 		].
 		node isVariable ifTrue: [
 			var := node name.
 			((locals includes: var) or:
-			 [(args includes: var) or:
+			 [(arguments includes: var) or:
 			 [(#(self true false nil) includes: var) or:
 			 [targetMeth maySubstituteGlobal: var in: aCodeGen]]]) ifFalse: [ ^ false ].
 		].
@@ -2274,7 +2275,7 @@ RustMethod >> popArgsExpr: argCount [
 
 { #category : #copying }
 RustMethod >> postCopy [
-	args := args copy.
+	arguments := arguments copy.
 	locals := locals copy.
 	declarations := declarations copy.
 	parseTree := parseTree copy.
@@ -2367,14 +2368,14 @@ Undeclared variables are taken to be integers and will be converted from Smallta
 	instVarsUsed := self freeVariableReferences asSet.
 	varsAssignedTo := self variablesAssignedTo asSet.
 	instVarList := aClass allInstVarNames.
-	primArgCount := args size.
+	primArgCount := arguments size.
 
 	"add receiver fetch and arg conversions to prolog"
 	prolog addAll: self fetchRcvrExpr.
-	1 to: args size do: [:argIndex |
-		varName := args at: argIndex.
+	1 to: arguments size do: [:argIndex |
+		varName := arguments at: argIndex.
 		prolog addAll:
-			(self argConversionExprFor: varName stackIndex: args size - argIndex)].
+			(self argConversionExprFor: varName stackIndex: arguments size - argIndex)].
 
 	"add success check to postlog"
 	postlog addAll: self checkSuccessExpr.
@@ -2389,10 +2390,10 @@ Undeclared variables are taken to be integers and will be converted from Smallta
 				postlog addAll: (self instVarPutExprFor: varName offset: varIndex - 1)]]].
 	prolog addAll: self checkSuccessExpr.
 
-	((locals includes: 'rcvr') or: [(locals intersection: args) notEmpty]) ifTrue:
+	((locals includes: 'rcvr') or: [(locals intersection: arguments) notEmpty]) ifTrue:
 		[self error: 'local name conflicts with instance variable name'].
-	locals add: 'rcvr'; addAll: args.
-	args := args class new.
+	locals add: 'rcvr'; addAll: arguments.
+	arguments := arguments class new.
 	endsWithReturn := self endsWithReturn.
 	self fixUpReturns: primArgCount postlog: postlog.
 
@@ -2714,7 +2715,7 @@ RustMethod >> renameVariablesUsing: aDictionary [
 	aDictionary isEmpty ifTrue: [^self].
 
 	"map args and locals"
-	args := args collect: [ :arg | aDictionary at: arg ifAbsent: [ arg ]].
+	arguments := arguments collect: [ :arg | aDictionary at: arg ifAbsent: [ arg ]].
 	locals := locals collect: [ :v | aDictionary at: v ifAbsent: [ v ]].
 
 	"map declarations"
@@ -2760,9 +2761,9 @@ RustMethod >> renameVarsForInliningInto: destMethod except: doNotRename in: aCod
 	destVars addAll: destMethod locals.
 	destVars addAll: destMethod args.
 	usedVars := destVars copy.  "keeps track of names in use"
-	usedVars addAll: args; addAll: locals.
+	usedVars addAll: arguments; addAll: locals.
 	varMap := Dictionary new: 100.
-	locals, args do:
+	locals, arguments do:
 		[ :v |
 		((doNotRename includes: v) not
 		  and: [destVars includes: v]) ifTrue:
@@ -2796,9 +2797,10 @@ RustMethod >> replaceSizeMessages [
 
 { #category : #accessing }
 RustMethod >> returnType [
-	"The type of the values returned by this method. This string will be used in the C declaration of this function."
+	"The type of the values returned by this method. This string will be used in the Rust declaration of this function."
+	<return: #RustTypedValue>
 
-	^returnType
+	^ returnType
 ]
 
 { #category : #accessing }
@@ -2845,9 +2847,15 @@ RustMethod >> setSelector: sel definingClass: class args: argList locals: localL
 
 	selector := sel.
 	definingClass := class.
-	args := argList asOrderedCollection collect: [:arg | arg key].
-	locals := (localList collect: [:arg | arg key]) asSet.
+
+	locals := RustLocalDeclarations new.
+	localList do: [ :eachLocal | locals addDeclaration: (RustDeclaration named: eachLocal key) ].
+	
+	arguments := RustLocalDeclarations new.
+	argList do: [ :eachArgument | arguments addDeclaration: (RustDeclaration named: eachArgument key) ].
+
 	declarations := RustDeclarations new.
+
 	self addTypeForSelf.
 	primitive := aNumber.
 	properties := methodProperties.
@@ -3109,19 +3117,16 @@ RustMethod >> transformReturnSubExpression: node toAssignmentOf: exitVar andGoto
 { #category : #'type inference' }
 RustMethod >> transformReturns [
 	"Once the return type has been found or inferred, returns may bneed to be modified.
-	 If the return type is #void, any occurrences of ^expr must be replaced with expr. ^self.
-	 If the type is #sqInt any any occurrences of ^self are replaced with ^0."
-	(returnType == #void or: [returnType == #sqInt]) ifFalse:
-		[^self].
+	 If the return type is #void, any occurrences of ^expr must be replaced with expr. ^self"
+	returnType isVoid not
+		ifTrue: [ ^ self ].
+
 	parseTree nodesWithParentsDo:
 		[:node :parent|
 		node isReturn ifTrue:
 			[(node expression isVariable and: [node expression name = 'self'])
-				ifTrue:
-					[returnType = #sqInt ifTrue:
-						[node setExpression: (RustTConstantNode new setValue: 0)]]
 				ifFalse:
-					[returnType = #void ifTrue:
+					[returnType isVoid ifTrue:
 						[parent
 							replaceChild: node
 							with: (RustTStmtListNode new
@@ -3143,7 +3148,7 @@ RustMethod >> transformToStructClassMethodFor: aCCodeGenerator [
 		[^self returnType: (definingClass returnTypeForAccessor: selector)].
 	replacements := IdentityDictionary new.
 	selfNode := RustTVariableNode new setName: 'self_in_', (aCCodeGenerator cFunctionNameFor: selector).
-	args do:
+	arguments do:
 		[:var|
 		(definingClass isAccessor: var) ifTrue:
 			[self error: 'In ', definingClass name, '>>', selector, ' ', var, ' arg shadows struct field and will break during translation!']].
@@ -3163,7 +3168,7 @@ RustMethod >> transformToStructClassMethodFor: aCCodeGenerator [
 		[self replaceNodesIn: replacements].
 	typeForSelf := self typeForSelf.
 	self assert: (typeForSelf notNil and: [typeForSelf ~~ #implicit]).
-	self declarationAt: (args addFirst: selfNode name)
+	self declarationAt: (arguments addFirst: selfNode name)
 		put: (declarations removeKey: 'self'), '_in_', (aCCodeGenerator cFunctionNameFor: selector)
 ]
 
@@ -3285,10 +3290,10 @@ RustMethod >> typeFor: aVariable in: aCodeGen [
 		declarationAt: varName
 		ifPresent: [ :aDeclaration | aCodeGen extractTypeFor: varName fromDeclaration: aDeclaration ]
 		ifAbsent: [
-			(args includes: varName)
+			(arguments hasDeclarationAt: varName)
 				ifTrue: [ RustUnknownType new ]
 				ifFalse: [
-					(locals includes: varName)
+					(locals hasDeclarationAt: varName)
 						ifTrue: [ RustUnknownType new ]
 						ifFalse: [ aCodeGen typeOfVariable: varName ] ] ]
 ]

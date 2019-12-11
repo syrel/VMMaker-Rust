@@ -15,6 +15,13 @@ RustDeclaration class >> name: aNameSymbol type: aRustType [
 		variableType: aRustType
 ]
 
+{ #category : #'instance creation' }
+RustDeclaration class >> named: aNameSymbol [
+	^ self new
+		variableName: aNameSymbol;
+		variableType: RustUnknownType new
+]
+
 { #category : #'api - converting' }
 RustDeclaration >> beSigned [
 	self

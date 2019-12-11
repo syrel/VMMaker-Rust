@@ -335,7 +335,7 @@ RustTSendNode >> isSend [
 
 { #category : #'C code generation' }
 RustTSendNode >> isStructReference: varNode in: aCodeGen [
-	^(varNode structTargetKindIn: aCodeGen) notNil
+	^ false
 ]
 
 { #category : #testing }
@@ -527,41 +527,6 @@ RustTSendNode >> shouldIncludeReceiverAsFirstArgument: aCodeGen [
 		 If the variable is 'self' and the method being called is not in
 		 the method set (i.e. it is some external code), don't include it."
 	^(self shouldExcludeReceiverAsFirstArgument: aCodeGen) not
-]
-
-{ #category : #testing }
-RustTSendNode >> structTargetKindIn: aCodeGen [
-	"Answer if the recever evaluates to a struct or struct pointer
-	 and hence can be dereferenced using . or ->.  Answer any of
-	 #struct #pointer or nil.  Right now we don't need or support
-	 structure return so this method answers either #pointer or nil."
-	selector == #cCoerceSimple:to: ifTrue:
-		[^(VMStructType isTypePointerToStruct: arguments last value) ifTrue:
-			[#pointer]].
-
-	selector == #addressOf: ifTrue:
-		[^#pointer].
-
-	selector == #at: ifTrue:
-		[receiver isVariable ifTrue:
-			[(aCodeGen typeOfVariable: receiver name) ifNotNil:
-				[:type| | derefType |
-				 type last = $* ifFalse:
-					[^receiver structTargetKindIn: aCodeGen].
-				 (VMStructType isTypeStruct: (aCodeGen
-											extractTypeFor: receiver name
-											fromDeclaration: type allButLast)) ifTrue:
-						[^#struct]]].
-		(receiver structTargetKindIn: aCodeGen) ifNotNil:
-			[:kind| ^kind]].
-
-	(aCodeGen selectorReturnsPointerToStruct: selector) ifTrue:
-		[^#pointer].
-
-	(aCodeGen selectorReturnsStruct: selector) ifTrue:
-		[^#struct].
-
-	^nil
 ]
 
 { #category : #'type inference' }

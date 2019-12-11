@@ -347,6 +347,16 @@ pub fn return_negative_one(&self) -> i8 {
 ]
 
 { #category : #'examples - return' }
+RustCodeGeneratorExamples >> code_returnNew [
+	<gtExample>
+	| aCode |
+
+	aCode := self generator cCodeForMethod: #returnNew.
+
+	^ aCode
+]
+
+{ #category : #'examples - return' }
 RustCodeGeneratorExamples >> code_returnNil [
 	<gtExample>
 	| aCode |

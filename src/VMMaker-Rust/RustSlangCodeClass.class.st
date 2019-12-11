@@ -158,6 +158,11 @@ RustSlangCodeClass >> returnNegativeOne [
 ]
 
 { #category : #return }
+RustSlangCodeClass >> returnNew [
+	^ RustSlangCodeClass new
+]
+
+{ #category : #return }
 RustSlangCodeClass >> returnNil [
 	^ nil
 ]

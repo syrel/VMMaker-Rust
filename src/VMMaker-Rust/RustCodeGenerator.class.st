@@ -2230,10 +2230,7 @@ RustCodeGenerator >> generateIfNilAsArgument: msgNode on: aStream indent: level 
 			 msgNode args last emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
 			 aStream crtab: level + 1; nextPut: $:; space.
 			 msgNode receiver emitCCodeAsArgumentOn: aStream level: 0 generator: self.
-			 (msgNode receiver isLeaf
-			  or: [msgNode receiver isSend
-				  and: [(self isStructSend: msgNode receiver)
-				  and: [msgNode receiver receiver isLeaf]]]) ifFalse:
+			 (msgNode receiver isLeaf) ifFalse:
 				[logger cr; nextPutAll: 'sending ifNil: to non-leaf in '; nextPutAll: currentMethod selector].
 			 aStream nextPut: $)]
 		ifTrue:
@@ -3502,13 +3499,13 @@ RustCodeGenerator >> inferTypesForImplicitlyTypedVariablesAndMethods [
 		changedReturnType ] whileTrue.
 
 	"Type all as-yet-untyped methods as the default"
-	methods do:
-		[:m|
-		m returnType ifNil:
-			[m returnType: (m returnsExpression
-								ifTrue: [ RustUnknownType new ]
-								ifFalse: [self implicitReturnTypeFor: m])].
-		m transformReturns].
+	methods
+		select: [ :eachMethod | eachMethod returnType isUnknown ]
+		thenDo: [ :eachMethod |
+			eachMethod returnType: (eachMethod returnsExpression
+				ifTrue: [ RustUnknownType new ]
+				ifFalse: [ self implicitReturnTypeFor: eachMethod ] ).
+			eachMethod transformReturns ].
 
 	"Make a final pass to type anything assigned from the default type"
 	allMethods do:
@@ -4014,25 +4011,6 @@ RustCodeGenerator >> isSpecialSelector: aSelector [
 { #category : #'spur primitive compilation' }
 RustCodeGenerator >> isStackAccessor: selector given: interpreterClass [
 	^interpreterClass isStackAccessor: selector
-]
-
-{ #category : #utilities }
-RustCodeGenerator >> isStructSend: aTSendNode [
-	"Answer if the argument aTSendNode is a send of a structure accessor.
-	 This is tricky.  We want
-		foo bar => foo->bar
-		foo bar => foo.bar
-		foo bar: expr => foo->bar = expr
-		foo bar: expr => foo.bar = expr
-	 depending on whether foo is a struct or a pointer to a struct,
-	 but only if both foo is a struct type and bar is a field accessor.
-	 The tricky cases are self-sends within struct class methods.  Here we need to
-	 distinguish between self-sends of ordinary methods from self sends of accessors."
-	^aTSendNode numArgs <= 1
-	   and: [(aTSendNode receiver structTargetKindIn: self) notNil
-	   and: [(self methodNamed: aTSendNode selector)
-				ifNil: [false]
-				ifNotNil: [:method| method isStructAccessor]]]
 ]
 
 { #category : #inlining }
@@ -4630,23 +4608,23 @@ RustCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 { #category : #utilities }
 RustCodeGenerator >> prepareMethods [
 	| globals |
+
 	globals := Set new: 200.
 	globals addAll: variables.
-	methods do:
-		[:m |
-		m locals, m args do:
-			[:var |
-			(globals includes: var) ifTrue:
-				[self error: 'Local variable ''', var, ''' may mask global when inlining ', m selector].
-			((methods at: var ifAbsent: [nil]) ifNil: [false] ifNotNil: [:m1| m1 isStructAccessor not]) ifTrue:
+
+	methods do: [:eachMethod |
+		(eachMethod locals asArray, eachMethod args asArray) do: [ :eachDeclaration |
+			(globals includes: eachDeclaration variableName)
+				ifTrue: [ self error: 'Local variable ''', eachDeclaration variableName, ''' may mask global when inlining ', eachMethod selector ].
+			((methods at: eachDeclaration ifAbsent: [nil]) ifNil: [false] ifNotNil: [:m1| m1 isStructAccessor not]) ifTrue:
 				[logger
 					ensureCr;
-					nextPutAll: 'Local variable name ''', var, ''' in ';
-					nextPutAll: m selector;
+					nextPutAll: 'Local variable name ''', eachDeclaration, ''' in ';
+					nextPutAll: eachMethod selector;
 					nextPutAll: ' may mask method when inlining';
 					cr]].
-		m bindClassVariablesIn: constants.
-		m prepareMethodIn: self]
+		eachMethod bindClassVariablesIn: constants.
+		eachMethod prepareMethodIn: self]
 ]
 
 { #category : #accessing }

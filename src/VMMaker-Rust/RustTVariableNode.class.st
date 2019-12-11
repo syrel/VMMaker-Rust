@@ -94,14 +94,6 @@ RustTVariableNode >> setName: aString [
 	name := aString.
 ]
 
-{ #category : #testing }
-RustTVariableNode >> structTargetKindIn: aCodeGen [
-	"Answer if the recever evaluates to a struct or struct pointer
-	 and hence can be dereferenced using . or ->.  Answer any of
-	 #struct #pointer or nil"
-	^aCodeGen structTargetKindForVariableName: name
-]
-
 { #category : #'type inference' }
 RustTVariableNode >> typeOrNilFrom: aCodeGenerator in: aTMethod [
 	^ aTMethod typeFor: self in: aCodeGenerator

@@ -14,6 +14,15 @@ RustDeclarations >> addDeclaration: aDeclaration [
 		put: aDeclaration
 ]
 
+{ #category : #'api - copying' }
+RustDeclarations >> asArray [
+	<return: #Array of: #RustDeclaration>
+
+	self assertDeclarations.
+
+	^ declarations values asArray
+]
+
 { #category : #asserting }
 RustDeclarations >> assertDeclarations [
 
@@ -24,6 +33,26 @@ RustDeclarations >> assertDeclarations [
 	self 
 		assert: [ (declarations values allSatisfy: [ :eachDeclaration | eachDeclaration isKindOf: RustDeclaration ]) ]
 		description: [ 'All declarations must be reified' ].
+]
+
+{ #category : #'api - copying' }
+RustDeclarations >> copyWithoutAllNamed: aCollectionOfNames [
+	"Return declarations that are not named like given ones"
+	<return: #RustDeclarations>
+
+	| aCopy aSetOfNames |
+	self
+		assert: [ aCollectionOfNames allSatisfy: #isSymbol ]
+		description: [ 'All must be symbols' ].
+		
+	aCopy := self class new.
+	aSetOfNames := aCollectionOfNames asSet.
+	
+	self declarationsDo: [ :eachDeclaration |
+		(aSetOfNames includes: eachDeclaration variableName)
+			ifFalse: [ aCopy addDeclaration: eachDeclaration ] ].
+
+	^ aCopy
 ]
 
 { #category : #'api - accessing' }
@@ -110,9 +139,14 @@ RustDeclarations >> declarationNames [
 	^ declarations keys asSet
 ]
 
-{ #category : #'api - accessing' }
+{ #category : #'api - enumerating' }
 RustDeclarations >> declarationsDo: aBlock [
 	declarations do: aBlock
+]
+
+{ #category : #'api - enumerating' }
+RustDeclarations >> do: elementBlock separatedBy: separatorBlock [
+	declarations do: elementBlock separatedBy: separatorBlock
 ]
 
 { #category : #'api - testing' }
@@ -128,11 +162,23 @@ RustDeclarations >> hasDeclarationAt: aVariableName [
 	^ declarations includesKey: aVariableName
 ]
 
+{ #category : #'api - testing' }
+RustDeclarations >> ifNotEmpty: aBlock [
+	^ self asArray ifNotEmpty: aBlock
+]
+
 { #category : #initialization }
 RustDeclarations >> initialize [
 	super initialize.
 	
 	declarations := Dictionary new
+]
+
+{ #category : #'api - testing' }
+RustDeclarations >> isEmpty [
+	<return: #Boolean>
+
+	^ declarations isEmpty
 ]
 
 { #category : #'api - accessing' }
