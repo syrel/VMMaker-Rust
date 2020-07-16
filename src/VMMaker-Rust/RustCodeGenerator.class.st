@@ -519,7 +519,7 @@ RustCodeGenerator >> addStructMethodFor: aClass selector: selector [
 			ifFalse: [self error: 'conflicting implementations for ', selector storeString]].
 	^(self addMethodFor: aClass selector: selector) ifNotNil:
 		[:tmethod|
-		tmethod transformToStructClassMethodFor: self.
+		"tmethod transformToStructClassMethodFor: self."
 		tmethod]
 ]
 

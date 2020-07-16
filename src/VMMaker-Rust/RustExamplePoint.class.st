@@ -16,6 +16,14 @@ RustExamplePoint class >> rustInstanceVariableDeclariation [
 	}
 ]
 
+{ #category : #initialization }
+RustExamplePoint >> initialize [
+	super initialize.
+	
+	x := 0.
+	y := 0.
+]
+
 { #category : #accessing }
 RustExamplePoint >> x [
 	^ x

@@ -121,12 +121,17 @@ RustMethod >> addReturnTypesFor: aNode to: typeSet in: aCodeGen [
 RustMethod >> addTypeForSelf [
 	"If self should be typed then add a suitable type declaration.
 	 Preserve the flagging of an implicit self using the #implicit symbol as the fake type."
-	self typeForSelf ifNotNil:
+	
+	self typeForSelf ifNotNil: [ :aTypeForSelf |
+		self declarationAt: #self put: (RustDeclaration named: #self)
+	].
+	
+	"self typeForSelf ifNotNil:
 		[:typeForSelf|
-		self declarationAt: 'self'
+		self declarationAt: #self
 			put: (typeForSelf == #implicit
 					ifTrue: [typeForSelf]
-					ifFalse: [typeForSelf, ' self'])]
+					ifFalse: [typeForSelf, ' self'])]"
 ]
 
 { #category : #'inlining support' }
@@ -3020,7 +3025,7 @@ RustMethod >> superExpansionNodeFor: aSelector args: argumentNodes [
 			[:superMethod| | superTMethod commonVars varMap |
 			superTMethod := superMethod asTranslationMethodOfClass: self class.
 			((argumentNodes allSatisfy: [:parseNode| parseNode isVariableNode])
-			and: [(argumentNodes asOrderedCollection collect: [:parseNode| parseNode key]) = superTMethod args]) ifFalse:
+			and: [(argumentNodes asOrderedCollection collect: [:parseNode| parseNode key]) asArray = superTMethod args asArray]) ifFalse:
 				[self error: definingClass name, '>>',selector, ' args ~= ',
 							superTMethod definingClass name, '>>', aSelector,
 							(String with: $. with: Character cr),
